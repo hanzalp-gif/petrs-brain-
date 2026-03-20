@@ -136,7 +136,7 @@ function updateDrive() {
 document.getElementById('driveBtn').onclick = () => {
   if(driveToken) { alert('Drive již připojeno'); return; }
   google.accounts.oauth2.initTokenClient({
-    client_id: 'TVŮJ_GOOGLE_CLIENT_ID',
+    client_id: '340761004858-rn3ce54hcmm1r0mnco8ia8rdm1mmk2t9.apps.googleusercontent.com',
     scope: 'https://www.googleapis.com/auth/drive.file',
     callback: token => { driveToken = token; document.getElementById('driveBtn').innerText='Drive: OK'; }
   }).requestAccessToken();
