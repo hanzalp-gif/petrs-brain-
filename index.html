@@ -2,49 +2,157 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Petr's Brain v3.3</title>
+    <title>Petr's Brain v3.4 - TOTAL RESET</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        body { background: #05070a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .card { background: rgba(30, 41, 59, 0.4); border: 1px solid #1e293b; border-radius: 20px; }
-        .active-mod { border-left: 4px solid #0ea5e9; background: #0f172a !important; color: white !important; }
-        .scroll-area { height: calc(100vh - 180px); overflow-y: auto; }
-        .ai-box { background: linear-gradient(135deg, rgba(14, 165, 233, 0.1) 0%, transparent 100%); border-left: 4px solid #0ea5e9; }
+        body { background: #020408; color: #f8fafc; font-family: sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(56, 189, 248, 0.1); }
+        .ai-glow { box-shadow: 0 0 20px rgba(14, 165, 233, 0.15); }
     </style>
 </head>
-<body class="flex h-screen bg-[#05070a]">
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <nav class="w-72 bg-slate-950 border-r border-slate-900 flex flex-col p-6">
-        <div class="mb-10 px-2">
-            <h1 class="text-2xl font-black text-sky-500 italic uppercase">Petr's Brain</h1>
-            <p class="text-[9px] text-slate-600 font-bold tracking-[0.3em]">CONTEXTUAL ASSISTANT 3.3</p>
+    <header class="p-6 border-b border-slate-900 flex justify-between items-center bg-slate-950">
+        <div>
+            <h1 class="text-xl font-black italic tracking-tighter text-sky-500">PETR'S BRAIN <span class="text-slate-600 text-[10px] ml-2 font-mono">V3.4</span></h1>
         </div>
-        
-        <div class="space-y-1 flex-1">
-            <button onclick="switchModule('dash')" id="m-dash" class="active-mod w-full p-4 rounded-xl text-left text-slate-400 hover:bg-slate-900 flex items-center gap-3 transition-all font-bold text-sm"><span>🚀</span> PŘEHLED DNE</button>
-            <button onclick="switchModule('notes')" id="m-notes" class="w-full p-4 rounded-xl text-left text-slate-400 hover:bg-slate-900 flex items-center gap-3 transition-all font-bold text-sm"><span>📝</span> ZÁPISNÍK</button>
-            <button onclick="switchModule('family')" id="m-family" class="w-full p-4 rounded-xl text-left text-slate-400 hover:bg-slate-900 flex items-center gap-3 transition-all font-bold text-sm"><span>👨‍👩‍👧</span> RODINA & DĚTI</button>
-        </div>
+        <div id="status-tag" class="px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold border border-red-500/20">ODPOJENO</div>
+    </header>
 
-        <div class="mt-auto pt-6 border-t border-slate-900">
-            <div id="sync-info" class="text-[10px] font-mono text-slate-600 mb-4 flex items-center gap-2">
-                <span id="sync-dot" class="w-2 h-2 rounded-full bg-red-500"></span> <span id="sync-text">SYNCHRONIZACE VYPNUTA</span>
+    <main class="flex-1 flex overflow-hidden">
+        <nav class="w-64 border-r border-slate-900 p-4 space-y-2 bg-slate-950/50">
+            <button onclick="setTab('dash')" class="w-full p-4 text-left rounded-xl hover:bg-slate-900 font-bold text-sm">🚀 Přehled dne</button>
+            <button onclick="setTab('notes')" class="w-full p-4 text-left rounded-xl hover:bg-slate-900 font-bold text-sm">📝 Zápisník</button>
+            <div class="pt-10">
+                <button onclick="openSet()" class="w-full p-3 text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-widest transition">⚙️ Nastavení ID</button>
             </div>
-            <button onclick="openSettings()" class="w-full py-3 bg-slate-900 rounded-xl text-[10px] font-bold text-slate-500 hover:text-white transition uppercase tracking-widest">⚙️ Konfigurace</button>
+        </nav>
+
+        <div id="main-view" class="flex-1 p-10 overflow-y-auto bg-[#020408]">
+            </div>
+    </main>
+
+    <footer class="p-6 border-t border-slate-900 bg-slate-950">
+        <div class="max-w-4xl mx-auto flex gap-4">
+            <input type="text" id="ai-input" onkeypress="if(event.key==='Enter')saveNote()" placeholder="Napiš cokoli..." class="flex-1 bg-slate-900 border border-slate-800 rounded-2xl py-4 px-6 focus:outline-none focus:border-sky-500/50">
+            <button onclick="saveNote()" class="bg-sky-600 px-8 rounded-xl font-bold hover:bg-sky-500 transition shadow-lg shadow-sky-900/20">ULOŽIT</button>
         </div>
-    </nav>
+    </footer>
 
-    <main class="flex-1 flex flex-col">
-        <header class="h-20 border-b border-slate-900 flex items-center justify-between px-10">
-            <h2 id="head-title" class="text-xs font-black uppercase tracking-[0.2em] text-slate-500 italic">Přehled dne</h2>
-            <button onclick="forceSync()" class="bg-sky-600 hover:bg-sky-500 text-white px-6 py-2 rounded-xl text-xs font-bold uppercase transition-all shadow-lg shadow-sky-900/20">Aktualizovat data</button>
-        </header>
+    <div id="modal" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center z-50">
+        <div class="glass p-10 rounded-[2.5rem] max-w-sm w-full text-center">
+            <h2 class="text-xl font-black mb-6 italic">KONFIGURACE</h2>
+            <input type="text" id="client-id-field" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs mb-6 font-mono text-sky-400" placeholder="Vlož Client ID">
+            <button onclick="saveID()" class="w-full bg-sky-600 py-4 rounded-xl font-bold uppercase text-xs mb-4">Uložit a Restartovat</button>
+            <button onclick="localStorage.clear(); location.reload();" class="text-red-500 text-[10px] font-bold uppercase">Smazat všechna data</button>
+        </div>
+    </div>
 
-        <div id="content" class="flex-1 p-10 scroll-area"></div>
+    <script>
+        let config = {
+            tab: 'dash',
+            id: localStorage.getItem('pb_id') || '',
+            notes: JSON.parse(localStorage.getItem('pb_notes')) || [],
+            events: []
+        };
 
-        <footer class="p-6 bg-slate-950 border-t border-slate-900">
-            <div class="max-w-4xl mx-auto flex gap-4 relative">
-                <input type="text" id="main-in" onkeypress="if(event.key==='Enter')handleInput()" 
-                       placeholder="Zapiš cokoli (např. 'Zítra stavebniny' nebo 'Dceři
+        let client;
+        let token = null;
+
+        window.onload = () => {
+            document.getElementById('client-id-field').value = config.id;
+            if(config.id) initGoogle();
+            render();
+        };
+
+        function initGoogle() {
+            client = google.accounts.oauth2.initTokenClient({
+                client_id: config.id,
+                scope: 'https://www.googleapis.com/auth/calendar.readonly',
+                callback: (resp) => {
+                    if(resp.access_token) {
+                        token = resp.access_token;
+                        document.getElementById('status-tag').innerText = 'AKTIVNÍ';
+                        document.getElementById('status-tag').className = 'px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold border border-green-500/20';
+                        loadCal();
+                    }
+                }
+            });
+        }
+
+        function startAuth() {
+            if(!config.id) { openSet(); return; }
+            client.requestAccessToken();
+        }
+
+        async function loadCal() {
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            try {
+                const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now.toISOString()}&singleEvents=true&orderBy=startTime`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                config.events = d.items || [];
+                render();
+            } catch (e) { alert('Chyba kalendáře: ' + e); }
+        }
+
+        function render() {
+            const view = document.getElementById('main-view');
+            
+            if (!token && config.tab === 'dash') {
+                view.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center">
+                        <div class="w-20 h-20 bg-slate-900 rounded-3xl mb-6 flex items-center justify-center text-3xl">🔌</div>
+                        <h2 class="text-2xl font-black mb-2 italic">SYSTÉM JE ODPOJEN</h2>
+                        <p class="text-slate-500 mb-8 max-w-xs text-sm">Pro zobrazení tvého dne se musíme spojit s Googlem.</p>
+                        <button onclick="startAuth()" class="bg-sky-600 px-10 py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-sky-500 transition-all transform hover:scale-105 shadow-2xl shadow-sky-900/40 text-sm">Aktivovat propojení</button>
+                    </div>`;
+                return;
+            }
+
+            if (config.tab === 'dash') {
+                let html = `<div class="max-w-4xl mx-auto"><h2 class="text-4xl font-black mb-10 italic">Ahoj Petře,</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-8">`;
+                
+                // Kalendář
+                html += `<div><h3 class="text-[10px] font-black text-slate-600 uppercase mb-4 tracking-widest">Dnešní program</h3>`;
+                if(config.events.length) {
+                    config.events.forEach(ev => {
+                        const time = ev.start.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Den';
+                        html += `<div class="glass p-5 mb-3 rounded-2xl border-l-4 border-sky-500 flex items-center gap-4">
+                            <span class="font-mono text-sky-400 font-bold">${time}</span>
+                            <span class="font-bold text-sm">${ev.summary}</span>
+                        </div>`;
+                    });
+                } else html += `<div class="p-8 border-2 border-dashed border-slate-900 rounded-3xl opacity-20 font-bold text-center">Žádné akce</div>`;
+                
+                // AI Tip
+                html += `</div><div><h3 class="text-[10px] font-black text-slate-600 uppercase mb-4 tracking-widest">Brain Analýza</h3>
+                    <div class="glass p-8 rounded-[2rem] ai-glow bg-sky-500/5">
+                        <p class="text-sky-400 font-black italic mb-2 italic">💡 DOPORUČENÍ</p>
+                        <p class="text-sm text-slate-300 leading-relaxed italic">Podle kalendáře máš dnes prostor na tu zakázku, o které jsi psal. Soustřeď se na to teď, odpoledne máš kroužky.</p>
+                    </div>
+                </div></div></div>`;
+                view.innerHTML = html;
+            } else {
+                view.innerHTML = `<div class="max-w-2xl mx-auto">` + config.notes.map(n => `<div class="glass p-6 mb-4 rounded-2xl border-l-4 border-slate-700 font-medium text-sm">${n.text}</div>`).reverse().join('') + `</div>`;
+            }
+        }
+
+        function saveNote() {
+            const i = document.getElementById('ai-input');
+            if(!i.value.trim()) return;
+            config.notes.push({ text: i.value, time: new Date().toISOString() });
+            localStorage.setItem('pb_notes', JSON.stringify(config.notes));
+            i.value = '';
+            render();
+        }
+
+        function setTab(t) { config.tab = t; render(); }
+        function openSet() { document.getElementById('modal').classList.remove('hidden'); }
+        function saveID() { localStorage.setItem('pb_id', document.getElementById('client-id-field').value.trim()); location.reload(); }
+    </script>
+</body>
+</html>
