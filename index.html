@@ -3,26 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Petr's Brain v2.3</title>
+    <title>Petr's Brain v2.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body { background: #0b0f1a; color: #e2e8f0; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .module-btn { transition: all 0.2s; border: 1px solid #1e293b; background: #161e2e; }
+        .module-btn { transition: all 0.2s; border: 1px solid #1e293b; background: #161e2e; cursor: pointer; }
         .module-btn:hover { background: #1e293b; border-color: #38bdf8; }
         .active-module { background: #1e293b; border-color: #0ea5e9; box-shadow: 0 0 20px rgba(14, 165, 233, 0.15); }
         .scroll-area { height: calc(100vh - 160px); overflow-y: auto; scrollbar-width: thin; }
-        .card { background: rgba(30, 41, 59, 0.4); border: 1px solid #334155; border-radius: 16px; padding: 1.25rem; backdrop-blur: sm; }
-        .slot-free { border-left: 4px solid #10b981; background: rgba(16, 185, 129, 0.05); }
-        .slot-busy { border-left: 4px solid #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .card { background: rgba(30, 41, 59, 0.4); border: 1px solid #334155; border-radius: 16px; padding: 1.25rem; }
+        #modal-settings { z-index: 9999 !important; } /* Toto zajistí, že nastavení bude vždy nahoře */
     </style>
 </head>
 <body class="flex h-screen overflow-hidden text-slate-200">
 
-    <nav class="w-64 bg-slate-900/80 border-r border-slate-800 flex flex-col p-5 space-y-2 backdrop-blur-md">
+    <nav class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col p-5 space-y-2 z-10">
         <div class="mb-8 px-2">
             <h1 class="text-2xl font-black text-sky-400 tracking-tighter italic">PETR'S BRAIN</h1>
-            <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] font-bold">External Context v2.3</p>
+            <p class="text-[9px] text-slate-500 uppercase tracking-[0.2em] font-bold">Version 2.4</p>
         </div>
         
         <button onclick="switchModule('notes')" id="btn-notes" class="module-btn p-3 rounded-2xl text-left flex items-center gap-3 active-module text-sm font-medium"><span>📝</span> Zápisník</button>
@@ -30,15 +29,34 @@
         <button onclick="switchModule('family')" id="btn-family" class="module-btn p-3 rounded-2xl text-left flex items-center gap-3 text-sm font-medium"><span>👨‍👩‍👧</span> Rodina</button>
         <button onclick="switchModule('personal')" id="btn-personal" class="module-btn p-3 rounded-2xl text-left flex items-center gap-3 text-sm font-medium"><span>🧘</span> Osobní</button>
         <button onclick="switchModule('projects')" id="btn-projects" class="module-btn p-3 rounded-2xl text-left flex items-center gap-3 text-sm font-medium"><span>🏗️</span> Projekty</button>
-        <button onclick="switchModule('method')" id="btn-method" class="module-btn p-3 rounded-2xl text-left flex items-center gap-3 text-sm font-medium"><span>📖</span> Metodika</button>
 
         <div class="mt-auto pt-6 border-t border-slate-800 space-y-3">
             <div id="status-drive" class="text-[10px] flex items-center gap-3 px-2 text-slate-400 font-mono">
-                <span class="w-2 h-2 rounded-full bg-slate-700"></span> DRIVE SYNC
+                <span class="w-2 h-2 rounded-full bg-slate-700"></span> DRIVE
             </div>
             <div id="status-cal" class="text-[10px] flex items-center gap-3 px-2 text-slate-400 font-mono">
-                <span class="w-2 h-2 rounded-full bg-slate-700"></span> CALENDAR SYNC
+                <span class="w-2 h-2 rounded-full bg-slate-700"></span> CALENDAR
             </div>
-            <button onclick="openSettings()" class="w-full mt-2 p-3 text-[10px] bg-slate-800/40 rounded-xl hover:bg-slate-700 transition uppercase font-bold tracking-widest text-slate-400">⚙️ Nastavení</button>
+            <button onclick="openSettings()" style="position: relative; z-index: 20;" class="w-full mt-2 p-3 text-[10px] bg-sky-900/30 border border-sky-500/20 rounded-xl hover:bg-sky-800/40 transition uppercase font-bold tracking-widest text-sky-400 cursor-pointer">
+                ⚙️ NASTAVENÍ GOOGLE
+            </button>
         </div>
     </nav>
+
+    <main class="flex-1 flex flex-col bg-[#080c14]">
+        <header class="h-16 border-b border-slate-800/60 flex items-center justify-between px-8 bg-slate-900/20">
+            <h2 id="module-title" class="text-sm font-bold uppercase tracking-widest text-slate-400 italic">Zápisník</h2>
+        </header>
+        <div id="content" class="flex-1 p-8 scroll-area"></div>
+        <footer class="p-6 bg-slate-900/40 border-t border-slate-800/60">
+            <div class="max-w-4xl mx-auto flex gap-4">
+                <input type="text" id="main-input" onkeypress="if(event.key==='Enter')handleInput()" placeholder="Zapiš si postřeh..." class="flex-1 bg-slate-800/30 border border-slate-700/40 rounded-2xl px-6 focus:outline-none focus:border-sky-500/50 transition-all text-sm">
+                <button onclick="handleInput()" class="bg-sky-600 hover:bg-sky-500 px-8 rounded-2xl font-bold transition-all shadow-lg active:scale-95">ULOŽIT</button>
+            </div>
+        </footer>
+    </main>
+
+    <div id="modal-settings" class="hidden fixed inset-0 bg-black/95 flex items-center justify-center p-6">
+        <div class="bg-slate-900 border border-slate-700 p-10 rounded-[2rem] max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-black mb-4 text-white italic tracking-widest">NASTAVENÍ SYSTÉMU</h3>
+            <p class="text-slate-400 text-[10px] mb-6 uppercase tracking-widest leading
