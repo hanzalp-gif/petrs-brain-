@@ -594,30 +594,7 @@ async function deleteCalEvent(eventId, calId) {
   } catch(e) {}
 }
 
-// ─── PARSE NATURAL LANGUAGE EVENT ───
-async function parseEventText(text) {
-  // Use Claude to parse the natural language
-  try {
-    const today = new Date().toISOString().slice(0,10);
-    const todayDay = new Date().toLocaleDateString('cs-CZ',{weekday:'long'});
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:300,
-        system:`Jsi parser kalendářních událostí. Dnešní datum: ${today} (${todayDay}). Parsuj text a vrať POUZE JSON objekt bez jakéhokoliv dalšího textu:\n{"title":"název události","date":"YYYY-MM-DD","start":"YYYY-MM-DDTHH:MM:00","end":"YYYY-MM-DDTHH:MM:00","allDay":false,"desc":""}\nPokud není čas uveden, nastav allDay:true. Pokud není délka, přidej 1 hodinu. Relativní výrazy (pondělí, příští týden, zítra) přepočítej na absolutní datum od dnešního dne ${today}.`,
-        messages:[{role:'user', content:text}]
-      })
-    });
-    const data = await resp.json();
-    const raw = data.content?.find(b=>b.type==='text')?.text || '';
-    const clean = raw.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
-  } catch(e) { return null; }
-}
-
-// ─── CHECK CONFLICTS ───
+// ─── CHECK CONFLICTS (kept for dialog use) ───
 function checkConflicts(parsed) {
   if (parsed.allDay) return [];
   const newStart = new Date(parsed.start);
@@ -630,50 +607,220 @@ function checkConflicts(parsed) {
   });
 }
 
-// ─── ADD EVENT FLOW (called from capture bar) ───
+// ─── ADD EVENT FLOW — smart dialog ───
 async function addEventFlow(text) {
-  // Show parsing indicator
-  const entry = {id:Date.now(), ctx:'Kalendář', text, time:ts(), ai:null, loading:true};
-  S.entries.push(entry); saveL();
-  go('zapisnik');
-  renderEnt();
-
-  const parsed = await parseEventText(text);
-  if (!parsed || !parsed.date) {
-    entry.ai = 'Nepodařilo se rozpoznat datum nebo čas. Zkus přesněji, např. "pondělí 24.3. schůzka ve 14:00".';
-    entry.loading = false;
-    saveL(); renderEnt(); return;
-  }
-
-  const conflicts = checkConflicts(parsed);
-  const conflictTxt = conflicts.length
-    ? `⚠️ Konflikt s: ${conflicts.map(e=>e.summary).join(', ')}. `
-    : '✓ Termín je volný. ';
-
-  // Show confirmation with option to add
-  entry.ai = `${conflictTxt}Rozpoznáno: **${parsed.title}** — ${parsed.allDay ? parsed.date : new Date(parsed.start).toLocaleString('cs-CZ',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}`;
-  entry.loading = false;
-  entry.pendingEvent = parsed;
-  entry.hasConflict = conflicts.length > 0;
-  saveL(); renderEnt();
+  // Show modal dialog with parsed + editable fields
+  showEventDialog(text);
 }
 
-// ─── CONFIRM ADD TO CALENDAR ───
-async function confirmAddEvent(entryId) {
-  const entry = S.entries.find(e=>e.id===entryId);
-  if (!entry?.pendingEvent) return;
-  const btn = document.querySelector(`[data-confirm="${entryId}"]`);
-  if (btn) { btn.textContent='Přidávám...'; btn.disabled=true; }
-  const ev = await createCalEvent(entry.pendingEvent);
-  if (ev) {
-    entry.ai = `✓ Přidáno do kalendáře: **${entry.pendingEvent.title}**`;
-    entry.pendingEvent = null;
-    if (S.page==='tyden') rTyden();
-  } else {
-    entry.ai = 'Nepodařilo se přidat do kalendáře. Zkontroluj oprávnění v Nastavení.';
-    entry.pendingEvent = null;
+function showEventDialog(text) {
+  // Remove existing dialog if any
+  const old = document.getElementById('evDialog');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'evDialog';
+  overlay.className = 'mov';
+  overlay.innerHTML = `
+    <div class="mbox" style="max-width:460px">
+      <div class="mtitle">Přidat do kalendáře</div>
+      <div class="msub" id="ev-parsing" style="color:var(--gold)">Rozpoznávám událost...</div>
+
+      <label class="mlbl">Název události</label>
+      <input class="minp" id="ev-title" type="text" placeholder="Název..." value="">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label class="mlbl">Datum</label>
+          <input class="minp" id="ev-date" type="date" value="${new Date().toISOString().slice(0,10)}">
+        </div>
+        <div>
+          <label class="mlbl">Čas začátku</label>
+          <input class="minp" id="ev-time" type="time" value="09:00">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label class="mlbl">Čas konce</label>
+          <input class="minp" id="ev-end" type="time" value="10:00">
+        </div>
+        <div>
+          <label class="mlbl" style="display:flex;align-items:center;gap:6px;margin-top:14px">
+            <input type="checkbox" id="ev-allday" onchange="toggleAllDay(this)"> Celý den
+          </label>
+        </div>
+      </div>
+
+      <div id="ev-conflict" style="display:none;margin:8px 0;padding:8px 11px;background:color-mix(in srgb,var(--coral) 10%,transparent);border:1px solid color-mix(in srgb,var(--coral) 25%,transparent);border-radius:var(--rs);font-size:11px;color:var(--coral)"></div>
+      <div id="ev-free" style="display:none;margin:8px 0;padding:8px 11px;background:color-mix(in srgb,var(--green) 10%,transparent);border:1px solid color-mix(in srgb,var(--green) 25%,transparent);border-radius:var(--rs);font-size:11px;color:var(--green)"></div>
+
+      <div class="macts">
+        <button class="mbtn mbtn-s" onclick="closeEvDialog()">Zrušit</button>
+        <button class="mbtn mbtn-p" id="ev-confirm-btn" onclick="confirmEventDialog()">Přidat do kalendáře</button>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="sec" style="margin:0 0 8px">Nejbližší volné termíny</div>
+        <div id="ev-suggestions" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // Auto-parse in background
+  parseAndFill(text);
+
+  // Live conflict check on date/time change
+  ['ev-date','ev-time','ev-end'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', checkDialogConflict);
+  });
+}
+
+function toggleAllDay(cb) {
+  const timeFields = document.querySelectorAll('#ev-time, #ev-end');
+  timeFields.forEach(f => { f.disabled = cb.checked; f.style.opacity = cb.checked ? '.3' : '1'; });
+}
+
+async function parseAndFill(text) {
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const todayDay = new Date().toLocaleDateString('cs-CZ',{weekday:'long'});
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514', max_tokens:300,
+        system:`Jsi parser kalendářních událostí. Dnešní datum: ${today} (${todayDay}). Parsuj text a vrať POUZE JSON:\n{"title":"název","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","allDay":false}\nPokud není čas → allDay:true. Pokud není konec → přidej 1 hodinu. Relativní výrazy přepočítej od ${today}. Pondělí = nejbližší budoucí pondělí.`,
+        messages:[{role:'user', content:text}]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.find(b=>b.type==='text')?.text || '';
+    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    const sub = document.getElementById('ev-parsing');
+    if (!parsed?.date) { if(sub) sub.textContent='Datum nerozpoznáno — vyplň ručně.'; return; }
+    if(sub) sub.textContent = '';
+
+    // Fill fields
+    const titleEl = document.getElementById('ev-title');
+    const dateEl  = document.getElementById('ev-date');
+    const timeEl  = document.getElementById('ev-time');
+    const endEl   = document.getElementById('ev-end');
+    const alldEl  = document.getElementById('ev-allday');
+    if (titleEl) titleEl.value = parsed.title || '';
+    if (dateEl)  dateEl.value  = parsed.date || today;
+    if (parsed.allDay) {
+      if (alldEl) { alldEl.checked = true; toggleAllDay(alldEl); }
+    } else {
+      if (timeEl) timeEl.value = parsed.startTime || '09:00';
+      if (endEl)  endEl.value  = parsed.endTime   || '10:00';
+    }
+
+    // Show date in human-readable form
+    const d = new Date(parsed.date);
+    const dStr = d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long'});
+    if (sub) sub.innerHTML = `Nalezeno: <strong>${dStr}</strong>${parsed.allDay?'':` v ${parsed.startTime}`}`;
+
+    checkDialogConflict();
+    buildSuggestions(parsed.date);
+  } catch(e) {
+    const sub = document.getElementById('ev-parsing');
+    if (sub) sub.textContent = 'Nepodařilo se automaticky rozpoznat — vyplň ručně.';
   }
-  saveL(); renderEnt();
+}
+
+function checkDialogConflict() {
+  const date  = document.getElementById('ev-date')?.value;
+  const time  = document.getElementById('ev-time')?.value;
+  const endT  = document.getElementById('ev-end')?.value;
+  const allD  = document.getElementById('ev-allday')?.checked;
+  const confEl = document.getElementById('ev-conflict');
+  const freeEl = document.getElementById('ev-free');
+  if (!date || !confEl || !freeEl) return;
+
+  if (allD) { confEl.style.display='none'; freeEl.style.display='block'; freeEl.textContent='✓ Celý den — zkontroluj ostatní události ručně.'; return; }
+
+  const start = new Date(`${date}T${time||'09:00'}`);
+  const end   = new Date(`${date}T${endT||'10:00'}`);
+  const conflicts = S.calEvs.filter(e => {
+    if (!e.start.dateTime) return false;
+    return start < new Date(e.end?.dateTime||e.start.dateTime) && end > new Date(e.start.dateTime);
+  });
+
+  if (conflicts.length) {
+    confEl.style.display='block'; freeEl.style.display='none';
+    confEl.textContent = `⚠️ Konflikt s: ${conflicts.map(e=>e.summary).join(', ')}`;
+  } else {
+    confEl.style.display='none'; freeEl.style.display='block';
+    freeEl.textContent = '✓ Termín je volný';
+  }
+}
+
+function buildSuggestions(parsedDate) {
+  const el = document.getElementById('ev-suggestions');
+  if (!el) return;
+  // Find next 3 free days around the parsed date
+  const base = parsedDate ? new Date(parsedDate) : new Date();
+  const suggestions = [];
+  for (let i=0; i<14 && suggestions.length<4; i++) {
+    const d = new Date(base); d.setDate(base.getDate() + i);
+    const evs = S.calEvs.filter(e => new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
+    const isFree = evs.length === 0;
+    const dateStr = d.toISOString().slice(0,10);
+    const label = d.toLocaleDateString('cs-CZ',{weekday:'short',day:'numeric',month:'numeric'});
+    suggestions.push({dateStr, label, free: isFree});
+  }
+  el.innerHTML = suggestions.map(s=>`
+    <button onclick="applySuggestion('${s.dateStr}')" style="padding:4px 10px;border-radius:20px;font-family:var(--sans);font-size:10px;cursor:pointer;border:1px solid ${s.free?'color-mix(in srgb,var(--green) 35%,transparent)':'var(--line2)'};background:${s.free?'color-mix(in srgb,var(--green) 10%,transparent)':'transparent'};color:${s.free?'var(--green)':'var(--text3)'}">
+      ${s.label}${s.free?' ✓':''}
+    </button>`).join('');
+}
+
+function applySuggestion(dateStr) {
+  const dateEl = document.getElementById('ev-date');
+  if (dateEl) { dateEl.value = dateStr; checkDialogConflict(); }
+  const d = new Date(dateStr);
+  const sub = document.getElementById('ev-parsing');
+  if (sub) sub.innerHTML = `Datum: <strong>${d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long'})}</strong>`;
+}
+
+async function confirmEventDialog() {
+  const title = document.getElementById('ev-title')?.value.trim();
+  const date  = document.getElementById('ev-date')?.value;
+  const time  = document.getElementById('ev-time')?.value || '09:00';
+  const endT  = document.getElementById('ev-end')?.value  || '10:00';
+  const allD  = document.getElementById('ev-allday')?.checked;
+  const btn   = document.getElementById('ev-confirm-btn');
+
+  if (!title || !date) { alert('Vyplň název a datum.'); return; }
+  if (btn) { btn.textContent='Přidávám...'; btn.disabled=true; }
+
+  const parsed = {
+    title,
+    date,
+    allDay: allD,
+    start: `${date}T${time}:00`,
+    end:   `${date}T${endT}:00`
+  };
+
+  const ev = await createCalEvent(parsed);
+  closeEvDialog();
+
+  if (ev) {
+    const d = new Date(parsed.start);
+    const dStr = d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+    // Add success entry to zápisník
+    const entry = {id:Date.now(), ctx:'Kalendář', text:`Naplánováno: ${title}`, time:ts(), ai:`✓ Přidáno do Google Kalendáře — ${dStr}`, loading:false};
+    S.entries.push(entry); saveL();
+    if (S.page==='tyden') rTyden();
+    if (S.page==='zapisnik') { go('zapisnik'); }
+  } else {
+    alert('Nepodařilo se přidat. Zkontroluj oprávnění Google v Nastavení.');
+  }
+}
+
+function closeEvDialog() {
+  const d = document.getElementById('evDialog');
+  if (d) d.remove();
 }
 
 // ═══ DRIVE ═══
