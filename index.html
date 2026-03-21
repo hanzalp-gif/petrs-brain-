@@ -681,24 +681,62 @@ function toggleAllDay(cb) {
 }
 
 async function parseAndFill(text) {
+  const sub = document.getElementById('ev-parsing');
   try {
-    const today = new Date().toISOString().slice(0,10);
-    const todayDay = new Date().toLocaleDateString('cs-CZ',{weekday:'long'});
+    // Pre-calculate next weekdays in JS so we can send exact dates to AI
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0,10);
+    const todayName = now.toLocaleDateString('cs-CZ',{weekday:'long'});
+
+    // Build next 14 days map: "pondělí" -> "2026-03-23" etc.
+    const dayNames = ['neděle','pondělí','úterý','středa','čtvrtek','pátek','sobota'];
+    const nextDays = {};
+    for (let i=1; i<=14; i++) {
+      const d = new Date(now); d.setDate(now.getDate()+i);
+      const name = dayNames[d.getDay()];
+      if (!nextDays[name]) nextDays[name] = d.toISOString().slice(0,10);
+    }
+    const daysContext = Object.entries(nextDays).map(([n,d])=>`${n}=${d}`).join(', ');
+
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
-        model:'claude-sonnet-4-20250514', max_tokens:300,
-        system:`Jsi parser kalendářních událostí. Dnešní datum: ${today} (${todayDay}). Parsuj text a vrať POUZE JSON:\n{"title":"název","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","allDay":false}\nPokud není čas → allDay:true. Pokud není konec → přidej 1 hodinu. Relativní výrazy přepočítej od ${today}. Pondělí = nejbližší budoucí pondělí.`,
+        model:'claude-sonnet-4-20250514', max_tokens:400,
+        system:`Jsi parser kalendářních událostí. Vrať POUZE čistý JSON bez markdown, bez komentářů.
+
+Dnešní datum: ${todayStr} (${todayName})
+Nejbližší dny v týdnu: ${daysContext}
+
+Pravidla:
+- "pondělí" = ${nextDays['pondělí']||'příští pondělí'}
+- "úterý" = ${nextDays['úterý']||'příští úterý'}  
+- "středa" = ${nextDays['středa']||'příští středa'}
+- "čtvrtek" = ${nextDays['čtvrtek']||'příští čtvrtek'}
+- "pátek" = ${nextDays['pátek']||'příští pátek'}
+- "zítra" = ${new Date(now.getTime()+86400000).toISOString().slice(0,10)}
+- "příští týden" = ${nextDays['pondělí']||todayStr}
+- čas "ve 14h" nebo "ve 14:00" nebo "14:00" = startTime "14:00", endTime "15:00"
+- pokud není čas → allDay true
+- pokud není konec → přidej 1 hodinu ke startu
+- title = popis události bez časových výrazů a bez dnů v týdnu
+
+Vrať JSON:
+{"title":"...","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","allDay":false}`,
         messages:[{role:'user', content:text}]
       })
     });
     const data = await resp.json();
-    const raw = data.content?.find(b=>b.type==='text')?.text || '';
-    const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const raw = (data.content?.find(b=>b.type==='text')?.text || '').trim();
 
-    const sub = document.getElementById('ev-parsing');
-    if (!parsed?.date) { if(sub) sub.textContent='Datum nerozpoznáno — vyplň ručně.'; return; }
-    if(sub) sub.textContent = '';
+    // Try to extract JSON even if wrapped in markdown
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found');
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    if (!parsed?.date) {
+      if(sub) sub.textContent='Datum nerozpoznáno — vyplň ručně.';
+      return;
+    }
 
     // Fill fields
     const titleEl = document.getElementById('ev-title');
@@ -706,25 +744,30 @@ async function parseAndFill(text) {
     const timeEl  = document.getElementById('ev-time');
     const endEl   = document.getElementById('ev-end');
     const alldEl  = document.getElementById('ev-allday');
-    if (titleEl) titleEl.value = parsed.title || '';
-    if (dateEl)  dateEl.value  = parsed.date || today;
+
+    if (titleEl && parsed.title) titleEl.value = parsed.title;
+    if (dateEl)  dateEl.value = parsed.date;
+
     if (parsed.allDay) {
       if (alldEl) { alldEl.checked = true; toggleAllDay(alldEl); }
     } else {
-      if (timeEl) timeEl.value = parsed.startTime || '09:00';
-      if (endEl)  endEl.value  = parsed.endTime   || '10:00';
+      if (timeEl && parsed.startTime) timeEl.value = parsed.startTime;
+      if (endEl  && parsed.endTime)   endEl.value  = parsed.endTime;
     }
 
-    // Show date in human-readable form
-    const d = new Date(parsed.date);
+    // Show human-readable confirmation
+    // Use date + T12:00 to avoid timezone shift on date-only strings
+    const d = new Date(parsed.date + 'T12:00:00');
     const dStr = d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long'});
-    if (sub) sub.innerHTML = `Nalezeno: <strong>${dStr}</strong>${parsed.allDay?'':` v ${parsed.startTime}`}`;
+    if (sub) sub.innerHTML = `<span style="color:var(--green)">✓ Nalezeno:</span> <strong>${dStr}</strong>${!parsed.allDay && parsed.startTime ? ` v ${parsed.startTime}` : ''}`;
 
     checkDialogConflict();
     buildSuggestions(parsed.date);
   } catch(e) {
-    const sub = document.getElementById('ev-parsing');
+    console.warn('Parse error:', e);
     if (sub) sub.textContent = 'Nepodařilo se automaticky rozpoznat — vyplň ručně.';
+    // Still build suggestions for today
+    buildSuggestions(new Date().toISOString().slice(0,10));
   }
 }
 
