@@ -2,8 +2,8 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1a1a18">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f0f0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Petr's Brain">
@@ -11,158 +11,384 @@
 <title>Petr's Brain</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root {
-  --bg:#1a1a18;--bg2:#222220;--bg3:#2a2a27;--bg4:#323230;
-  --line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.13);
-  --text:#e8e6de;--text2:#9a9890;--text3:#5a5956;
-  --accent:#c8b97a;--accent2:#8fba8a;
-  --teal:#6db8a8;--coral:#d4826a;--lav:#9b8ec4;--pink:#c47a9b;--blue:#6a9bc4;
-  --serif:'DM Serif Display',Georgia,serif;--sans:'DM Sans',system-ui,sans-serif;
-  --r:14px;--rs:8px;--tr:0.18s cubic-bezier(.4,0,.2,1);
+  --bg: #0f0f0d;
+  --bg2: #161614;
+  --bg3: #1e1e1b;
+  --bg4: #272724;
+  --line: rgba(255,255,255,0.06);
+  --line2: rgba(255,255,255,0.11);
+  --text: #e2e0d8;
+  --text2: #8a8880;
+  --text3: #4a4946;
+  --gold: #c9aa6e;
+  --gold2: #a08848;
+  --green: #7aab7a;
+  --teal: #5fa898;
+  --coral: #c87060;
+  --lav: #8878b8;
+  --pink: #b86888;
+  --blue: #5888b8;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --r: 16px;
+  --rs: 10px;
+  --tr: 0.16s cubic-bezier(.4,0,.2,1);
 }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.6;overflow:hidden}
-#app{display:flex;height:100vh;height:100dvh}
-#sidebar{width:64px;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:3px;flex-shrink:0;z-index:10}
-#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.s-logo{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;flex-shrink:0}
-.s-logo svg{width:18px;height:18px}
-.nav-item{width:42px;height:42px;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background var(--tr),color var(--tr);color:var(--text3);gap:2px;position:relative}
-.nav-item:hover{background:var(--bg3);color:var(--text2)}
-.nav-item.active{background:var(--bg3);color:var(--text)}
-.nav-item.active::before{content:'';position:absolute;left:-1px;top:50%;transform:translateY(-50%);width:3px;height:18px;background:var(--accent);border-radius:0 3px 3px 0}
-.nav-icon{width:18px;height:18px;flex-shrink:0}
-.nav-label{font-size:8px;font-weight:500;letter-spacing:.02em}
-.nav-spacer{flex:1}
-.drive-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);position:absolute;bottom:5px;right:5px;transition:background .4s}
-.drive-dot.on{background:var(--accent2);box-shadow:0 0 6px var(--accent2)}
-.drive-dot.busy{background:var(--accent);animation:dp 1s infinite}
-@keyframes dp{0%,100%{opacity:1}50%{opacity:.4}}
-#page-header{padding:18px 22px 0;flex-shrink:0}
-.ph-row{display:flex;align-items:baseline;gap:9px;margin-bottom:3px}
-.ph-title{font-family:var(--serif);font-size:24px;color:var(--text);font-style:italic}
-.ph-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;letter-spacing:.03em}
-.ph-sub{font-size:12px;color:var(--text3)}
-#page-content{flex:1;overflow-y:auto;padding:14px 22px 110px}
-#page-content::-webkit-scrollbar{width:3px}
-#page-content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
-#capture-bar{position:fixed;bottom:0;left:64px;right:0;background:var(--bg2);border-top:1px solid var(--line);padding:10px 18px;display:flex;gap:8px;align-items:center;z-index:20}
-#cap-input{flex:1;background:var(--bg3);border:1px solid var(--line2);border-radius:20px;padding:8px 15px;font-family:var(--sans);font-size:13px;color:var(--text);outline:none;transition:border-color var(--tr)}
-#cap-input::placeholder{color:var(--text3)}
-#cap-input:focus{border-color:var(--accent)}
-.cap-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--tr)}
-.cap-send{background:var(--accent);color:var(--bg)}
-.cap-send:hover{opacity:.85;transform:scale(1.05)}
-.cap-send:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.cap-voice{background:var(--bg3);border:1px solid var(--line2);color:var(--text2)}
-.cap-voice:hover{background:var(--bg4)}
-.cap-voice.rec{background:var(--coral);color:#fff;border-color:var(--coral);animation:dp 1s infinite}
-#sync-bar{position:fixed;top:0;left:64px;right:0;height:2px;z-index:100;pointer-events:none;opacity:0}
-#sync-bar.busy{opacity:1;background:var(--accent);animation:sb 1.4s ease-in-out infinite}
-#sync-bar.ok{opacity:1;background:var(--accent2);animation:fade2 2s forwards}
-#sync-bar.err{opacity:1;background:var(--coral);animation:fade2 3s forwards}
-@keyframes sb{0%,100%{transform:scaleX(.3) translateX(-150%)}50%{transform:scaleX(.8) translateX(50%)}}
-@keyframes fade2{0%,70%{opacity:1}100%{opacity:0}}
-.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:15px;margin-bottom:10px}
-.card-sm{background:var(--bg3);border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;margin-bottom:7px}
-.sec-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 9px}
-.entry-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-bottom:9px;animation:fi .22s ease}
-@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-.entry-meta{display:flex;align-items:center;gap:7px;margin-bottom:7px}
-.ctx-tag{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
-.entry-time{font-size:10px;color:var(--text3);margin-left:auto}
-.entry-text{font-size:13px;color:var(--text);line-height:1.6;margin-bottom:9px}
-.ai-block{background:var(--bg3);border-radius:var(--rs);border-left:2px solid var(--accent);padding:9px 11px;font-size:12px;color:var(--text2);line-height:1.65}
-.ai-lbl{font-size:9px;font-weight:500;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
-.dots span{animation:db 1.2s infinite;display:inline-block;color:var(--accent)}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.65;
+  overflow: hidden;
+}
+
+/* ─── APP SHELL ─── */
+#app { display: flex; height: 100vh; height: 100dvh; }
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width: 60px;
+  background: var(--bg2);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0 12px;
+  gap: 2px;
+  flex-shrink: 0;
+  z-index: 30;
+}
+
+.s-logo {
+  width: 32px; height: 32px;
+  background: var(--gold);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.s-logo svg { width: 16px; height: 16px; }
+
+.nav-item {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--text3);
+  gap: 2px;
+  position: relative;
+  transition: background var(--tr), color var(--tr);
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text2); }
+.nav-item.active { background: var(--bg3); color: var(--text); }
+.nav-item.active::before {
+  content: '';
+  position: absolute; left: -1px; top: 50%;
+  transform: translateY(-50%);
+  width: 2px; height: 16px;
+  background: var(--gold);
+  border-radius: 0 2px 2px 0;
+}
+.nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
+.nav-lbl { font-size: 7.5px; font-weight: 500; letter-spacing: .03em; line-height: 1; }
+.nav-spacer { flex: 1; }
+
+/* Drive status dot */
+.g-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--text3);
+  position: absolute; bottom: 4px; right: 4px;
+  transition: background .4s, box-shadow .4s;
+}
+.g-dot.on { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.g-dot.busy { background: var(--gold); animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+/* ─── MAIN ─── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ─── PAGE HEADER ─── */
+#ph {
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 14px;
+}
+.ph-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+.ph-title { font-family: var(--serif); font-size: 22px; color: var(--text); font-style: italic; font-weight: 300; }
+.ph-badge {
+  font-size: 9px; font-weight: 500;
+  padding: 2px 7px; border-radius: 20px;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.ph-sub { font-size: 11px; color: var(--text3); }
+
+/* ─── CONTENT ─── */
+#pc {
+  flex: 1; overflow-y: auto;
+  padding: 16px 24px 120px;
+  scroll-behavior: smooth;
+}
+#pc::-webkit-scrollbar { width: 3px; }
+#pc::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+
+/* ─── CAPTURE BAR ─── */
+#cap-bar {
+  position: fixed; bottom: 0; left: 60px; right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--line);
+  padding: 10px 18px;
+  display: flex; gap: 8px; align-items: center;
+  z-index: 20;
+}
+#cap-in {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--line2);
+  border-radius: 22px;
+  padding: 9px 16px;
+  font-family: var(--sans); font-size: 13px;
+  color: var(--text); outline: none;
+  transition: border-color var(--tr);
+}
+#cap-in::placeholder { color: var(--text3); }
+#cap-in:focus { border-color: var(--gold); }
+.cbtn {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all var(--tr);
+}
+.cbtn-send { background: var(--gold); color: var(--bg); }
+.cbtn-send:hover { opacity: .85; transform: scale(1.06); }
+.cbtn-send:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.cbtn-voice { background: var(--bg3); border: 1px solid var(--line2); color: var(--text2); }
+.cbtn-voice:hover { background: var(--bg4); }
+.cbtn-voice.rec { background: var(--coral); color: #fff; border-color: var(--coral); animation: blink .8s infinite; }
+
+/* ─── SYNC BAR ─── */
+#sync-bar {
+  position: fixed; top: 0; left: 60px; right: 0;
+  height: 2px; z-index: 100; pointer-events: none;
+  opacity: 0;
+}
+#sync-bar.busy { opacity: 1; background: var(--gold); animation: sweep 1.2s ease-in-out infinite; }
+#sync-bar.ok { opacity: 1; background: var(--green); animation: fadeout 2.5s forwards; }
+#sync-bar.err { opacity: 1; background: var(--coral); animation: fadeout 3s forwards; }
+@keyframes sweep {
+  0% { transform: translateX(-100%) scaleX(.5); }
+  100% { transform: translateX(100%) scaleX(1.2); }
+}
+@keyframes fadeout { 0%,60%{opacity:1}100%{opacity:0} }
+
+/* ─── SECTION LABELS ─── */
+.sec { font-size: 9px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; margin: 20px 0 10px; }
+.sec:first-child { margin-top: 4px; }
+
+/* ─── ENTRY CARDS ─── */
+.ecard {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 13px 15px;
+  margin-bottom: 8px;
+  animation: slideup .2s ease;
+}
+@keyframes slideup { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+.emeta { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.etag { font-size: 9px; font-weight: 500; padding: 2px 8px; border-radius: 20px; letter-spacing: .03em; text-transform: uppercase; }
+.etime { font-size: 9px; color: var(--text3); margin-left: auto; }
+.etext { font-size: 13px; color: var(--text); line-height: 1.65; margin-bottom: 9px; }
+.ai-blk {
+  background: var(--bg3);
+  border-left: 2px solid var(--gold);
+  border-radius: 0 var(--rs) var(--rs) 0;
+  padding: 9px 12px;
+  font-size: 12px; color: var(--text2); line-height: 1.7;
+}
+.ai-lbl { font-size: 8px; font-weight: 500; color: var(--gold); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px; }
+.dots span { animation: db 1.2s infinite; display: inline-block; color: var(--gold); }
 .dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
 @keyframes db{0%,100%{opacity:.2}50%{opacity:1}}
-.ctx-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
-.ctx-pill{padding:4px 11px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--line2);color:var(--text3);background:transparent;transition:all var(--tr);font-family:var(--sans)}
-.ctx-pill:hover{color:var(--text2);background:var(--bg3)}
-.ctx-pill.active{color:var(--bg);border-color:transparent}
-.m-ddm{--mc:var(--teal)}.m-besip{--mc:var(--blue)}.m-rem{--mc:var(--accent)}
-.m-met{--mc:var(--coral)}.m-rod{--mc:var(--pink)}.m-osb{--mc:var(--lav)}.m-dum{--mc:var(--accent2)}
-.ctx-pill.active{background:var(--mc,var(--accent))}
-.ctx-tag{background:color-mix(in srgb,var(--mc,var(--accent)) 15%,transparent);color:var(--mc,var(--accent))}
-.week-scroll{overflow-x:auto;padding-bottom:8px}
-.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;min-width:560px;margin-bottom:14px}
-.day-col{background:var(--bg3);border-radius:var(--rs);padding:8px 5px;min-height:90px}
-.day-name{font-size:9px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;text-align:center}
-.day-num{font-size:15px;font-weight:300;text-align:center;margin-bottom:5px;color:var(--text2)}
-.day-col.today .day-num{color:var(--accent);font-weight:500}
-.day-col.today{border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
-.day-event{font-size:9px;padding:2px 4px;border-radius:3px;margin-bottom:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.day-free{font-size:9px;color:var(--accent2);text-align:center;margin-top:4px;opacity:.7}
-.free-win{display:flex;align-items:center;gap:10px;padding:11px 13px;background:var(--bg3);border-radius:var(--rs);border:1px solid var(--line);margin-bottom:7px;cursor:pointer;transition:border-color var(--tr)}
-.free-win:hover{border-color:var(--accent2)}
-.fw-dot{width:7px;height:7px;border-radius:50%;background:var(--accent2);flex-shrink:0}
-.fw-time{font-size:12px;font-weight:500;color:var(--text)}
-.fw-desc{font-size:11px;color:var(--text3)}
-.fw-tag{font-size:10px;padding:2px 7px;border-radius:10px;background:color-mix(in srgb,var(--accent2) 15%,transparent);color:var(--accent2);font-weight:500}
-.cal-btn{display:flex;align-items:center;gap:7px;padding:8px 14px;background:color-mix(in srgb,var(--blue) 10%,transparent);border:1px solid color-mix(in srgb,var(--blue) 25%,transparent);border-radius:var(--rs);font-size:12px;color:var(--blue);margin-bottom:12px;cursor:pointer;font-family:var(--sans);width:100%;transition:opacity var(--tr)}
-.cal-btn:hover{opacity:.8}
-.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px}
-.metric-card{background:var(--bg3);border-radius:var(--rs);padding:13px;border:1px solid var(--line)}
-.metric-lbl{font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
-.metric-val{font-family:var(--serif);font-size:26px;color:var(--text);line-height:1;margin-bottom:2px}
-.metric-sub{font-size:10px;color:var(--text3)}
-.metric-trend{font-size:11px;font-weight:500;margin-top:3px}
-.t-up{color:var(--accent2)}.t-dn{color:var(--coral)}
-.mood-row{display:flex;gap:7px;margin-bottom:10px}
-.mood-btn{flex:1;padding:9px 5px;border-radius:var(--rs);border:1px solid var(--line2);background:transparent;cursor:pointer;font-size:16px;text-align:center;transition:all var(--tr);font-family:var(--sans)}
-.mood-btn:hover{background:var(--bg3);transform:scale(1.08)}
-.mood-btn.sel{border-color:var(--lav);background:color-mix(in srgb,var(--lav) 15%,transparent)}
-.proj-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-bottom:9px}
-.proj-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
-.proj-name{font-size:13px;font-weight:500;color:var(--text)}
-.proj-st{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
-.s-act{background:color-mix(in srgb,var(--accent2) 15%,transparent);color:var(--accent2)}
-.s-pau{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}
-.s-pla{background:color-mix(in srgb,var(--text3) 15%,transparent);color:var(--text3)}
-.prog-bar{height:2px;background:var(--bg4);border-radius:2px;overflow:hidden;margin:7px 0}
-.prog-fill{height:100%;border-radius:2px}
-.proj-desc{font-size:12px;color:var(--text3);line-height:1.55}
-.prin-card{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--coral);border-radius:var(--r);padding:13px 15px;margin-bottom:9px}
-.prin-title{font-family:var(--serif);font-size:15px;color:var(--text);font-style:italic;margin-bottom:5px}
-.prin-text{font-size:12px;color:var(--text2);line-height:1.65}
-.prin-src{font-size:10px;color:var(--text3);margin-top:7px}
-.child-card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-bottom:9px}
-.child-hdr{display:flex;align-items:center;gap:9px;margin-bottom:9px}
-.child-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:14px;font-style:italic;flex-shrink:0}
-.child-name{font-size:13px;font-weight:500;color:var(--text)}
-.child-age{font-size:11px;color:var(--text3)}
-.child-note{font-size:12px;color:var(--text2);line-height:1.6}
-.child-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
-.child-tag{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--bg3);color:var(--text3);border:1px solid var(--line)}
-.action-btn{width:100%;padding:11px;background:var(--bg3);border:1px dashed var(--line2);border-radius:var(--rs);color:var(--text3);font-family:var(--sans);font-size:12px;cursor:pointer;text-align:left;transition:border-color var(--tr);margin-bottom:7px}
-.action-btn:hover{border-color:var(--accent);color:var(--text2)}
-.empty{text-align:center;padding:40px 20px;color:var(--text3)}
-.empty-ico{font-size:28px;margin-bottom:8px;opacity:.4}
-.empty-txt{font-size:12px;line-height:1.6}
-.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px}
-.modal-box{background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r);padding:26px 22px;max-width:400px;width:100%;animation:fi .2s ease}
-.modal-title{font-family:var(--serif);font-size:19px;font-style:italic;margin-bottom:5px;color:var(--text)}
-.modal-sub{font-size:12px;color:var(--text3);margin-bottom:18px;line-height:1.6}
-.modal-lbl{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:block}
-.modal-input{width:100%;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--rs);padding:9px 11px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;box-sizing:border-box;margin-bottom:12px}
-.modal-input:focus{border-color:var(--accent)}
-.modal-actions{display:flex;gap:7px;margin-top:16px}
-.modal-btn{flex:1;padding:9px;border-radius:var(--rs);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s}
-.modal-primary{background:var(--accent);color:var(--bg)}.modal-primary:hover{opacity:.85}
-.modal-secondary{background:var(--bg3);color:var(--text2);border:1px solid var(--line2)}
-.hint-step{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
-.hint-num{width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);font-size:10px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.hint-txt{font-size:12px;color:var(--text2);line-height:1.6}
-.hint-txt a{color:var(--accent)}
-@media(max-width:480px){
-  #sidebar{width:52px}#capture-bar,#sync-bar{left:52px}
-  #page-content{padding:10px 13px 110px}
-  .ph-title{font-size:20px}.week-grid{gap:2px}.day-col{padding:4px 2px}
-  .day-name{font-size:8px}.day-num{font-size:12px}.day-event{display:none}
+
+/* ─── CONTEXT PILLS ─── */
+.ctx-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 14px; }
+.ctx-p {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--line2);
+  color: var(--text3); background: transparent;
+  transition: all var(--tr); font-family: var(--sans);
+}
+.ctx-p:hover { color: var(--text2); background: var(--bg3); }
+.ctx-p.act { color: var(--bg); border-color: transparent; }
+
+/* Module colors */
+.m-d{--mc:var(--teal)}.m-b{--mc:var(--blue)}.m-r{--mc:var(--gold)}
+.m-m{--mc:var(--coral)}.m-f{--mc:var(--pink)}.m-p{--mc:var(--lav)}.m-h{--mc:var(--green)}
+.ctx-p.act { background: var(--mc, var(--gold)); }
+.etag { background: color-mix(in srgb,var(--mc,var(--gold)) 18%,transparent); color: var(--mc,var(--gold)); }
+
+/* ─── WEEK CALENDAR ─── */
+.wcal { overflow-x: auto; margin-bottom: 14px; }
+.wgrid {
+  display: grid; grid-template-columns: repeat(7,1fr);
+  gap: 4px; min-width: 500px;
+}
+.dcol {
+  background: var(--bg3); border-radius: var(--rs);
+  padding: 8px 5px; min-height: 100px;
+  border: 1px solid transparent;
+  transition: border-color var(--tr);
+}
+.dcol.today { border-color: color-mix(in srgb,var(--gold) 35%,transparent); }
+.dname { font-size: 8px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; text-align: center; margin-bottom: 4px; }
+.dnum { font-size: 16px; font-weight: 300; text-align: center; color: var(--text2); margin-bottom: 5px; }
+.dcol.today .dnum { color: var(--gold); font-weight: 400; }
+.dev { font-size: 8px; padding: 2px 4px; border-radius: 3px; margin-bottom: 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dfree { font-size: 8px; color: var(--text3); text-align: center; margin-top: 6px; opacity: .5; }
+
+/* Free windows */
+.fwin {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px;
+  background: var(--bg3); border: 1px solid var(--line);
+  border-radius: var(--rs); margin-bottom: 7px;
+  cursor: pointer; transition: border-color var(--tr), background var(--tr);
+}
+.fwin:hover { border-color: var(--green); background: color-mix(in srgb,var(--green) 5%,var(--bg3)); }
+.fwin-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.fwin-t { font-size: 12px; font-weight: 500; color: var(--text); }
+.fwin-s { font-size: 10px; color: var(--text3); }
+.fwin-tag { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: color-mix(in srgb,var(--green) 15%,transparent); color: var(--green); font-weight: 500; margin-left: auto; flex-shrink: 0; }
+
+/* Cal sync btn */
+.cal-sync {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px;
+  background: color-mix(in srgb,var(--blue) 8%,transparent);
+  border: 1px solid color-mix(in srgb,var(--blue) 22%,transparent);
+  border-radius: var(--rs); font-size: 11px; color: var(--blue);
+  margin-bottom: 14px; cursor: pointer; font-family: var(--sans);
+  width: 100%; transition: opacity var(--tr);
+}
+.cal-sync:hover { opacity: .8; }
+
+/* ─── METRICS ─── */
+.mgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.mcard { background: var(--bg3); border: 1px solid var(--line); border-radius: var(--rs); padding: 14px; }
+.mlbl { font-size: 9px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+.mval { font-family: var(--serif); font-size: 28px; color: var(--text); line-height: 1; margin-bottom: 2px; font-weight: 300; }
+.msub { font-size: 10px; color: var(--text3); }
+.mtrend { font-size: 10px; font-weight: 500; margin-top: 4px; }
+.tup{color:var(--green)}.tdn{color:var(--coral)}
+
+/* ─── MOOD ─── */
+.moodrow { display: flex; gap: 7px; margin-bottom: 8px; }
+.moodbtn {
+  flex: 1; padding: 10px 4px; border-radius: var(--rs);
+  border: 1px solid var(--line2); background: transparent;
+  cursor: pointer; font-size: 18px; text-align: center;
+  transition: all var(--tr); font-family: var(--sans);
+}
+.moodbtn:hover { background: var(--bg3); transform: scale(1.1); }
+.moodbtn.sel { border-color: var(--lav); background: color-mix(in srgb,var(--lav) 14%,transparent); }
+
+/* ─── PROJECT CARDS ─── */
+.pcard { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 15px; margin-bottom: 9px; }
+.phdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.pname { font-size: 13px; font-weight: 500; color: var(--text); }
+.pst { font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.st-a{background:color-mix(in srgb,var(--green) 15%,transparent);color:var(--green)}
+.st-p{background:color-mix(in srgb,var(--gold) 15%,transparent);color:var(--gold)}
+.st-n{background:color-mix(in srgb,var(--text3) 15%,transparent);color:var(--text3)}
+.pbar { height: 2px; background: var(--bg4); border-radius: 2px; overflow: hidden; margin: 8px 0 5px; }
+.pfill { height: 100%; border-radius: 2px; transition: width .6s ease; }
+.pdesc { font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+/* ─── PRINCIPLE CARDS ─── */
+.princ { background: var(--bg2); border: 1px solid var(--line); border-left: 2px solid var(--coral); border-radius: var(--r); padding: 13px 15px; margin-bottom: 8px; }
+.pt { font-family: var(--serif); font-size: 15px; color: var(--text); font-style: italic; margin-bottom: 5px; font-weight: 300; }
+.pb-txt { font-size: 12px; color: var(--text2); line-height: 1.7; }
+.psrc { font-size: 9px; color: var(--text3); margin-top: 7px; }
+
+/* ─── CHILD CARDS ─── */
+.ccard { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; margin-bottom: 9px; }
+.chdr { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+.cav { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 15px; font-style: italic; flex-shrink: 0; }
+.cnm { font-size: 13px; font-weight: 500; color: var(--text); }
+.cage { font-size: 10px; color: var(--text3); }
+.cnote { font-size: 12px; color: var(--text2); line-height: 1.65; }
+.ctags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+.ctag { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: var(--bg3); color: var(--text3); border: 1px solid var(--line); }
+
+/* ─── ACTION BUTTONS ─── */
+.abt {
+  width: 100%; padding: 11px 13px;
+  background: var(--bg3); border: 1px dashed var(--line2);
+  border-radius: var(--rs); color: var(--text3);
+  font-family: var(--sans); font-size: 12px;
+  cursor: pointer; text-align: left;
+  transition: all var(--tr); margin-bottom: 7px;
+  display: flex; align-items: center; gap: 8px;
+}
+.abt:hover { border-color: var(--gold); color: var(--text2); background: color-mix(in srgb,var(--gold) 4%,var(--bg3)); }
+.abt-arr { margin-left: auto; opacity: .4; }
+
+/* ─── SETTINGS MODAL ─── */
+.mov { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+.mbox { background: var(--bg2); border: 1px solid var(--line2); border-radius: var(--r); padding: 28px 24px; max-width: 420px; width: 100%; animation: slideup .2s ease; }
+.mtitle { font-family: var(--serif); font-size: 20px; font-style: italic; margin-bottom: 6px; color: var(--text); font-weight: 300; }
+.msub { font-size: 11px; color: var(--text3); margin-bottom: 20px; line-height: 1.7; }
+.mlbl { font-size: 9px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; display: block; }
+.minp { width: 100%; background: var(--bg3); border: 1px solid var(--line2); border-radius: var(--rs); padding: 10px 12px; font-family: var(--sans); font-size: 12px; color: var(--text); outline: none; box-sizing: border-box; margin-bottom: 14px; }
+.minp:focus { border-color: var(--gold); }
+.macts { display: flex; gap: 8px; margin-top: 18px; }
+.mbtn { flex: 1; padding: 10px; border-radius: var(--rs); font-family: var(--sans); font-size: 11px; font-weight: 500; cursor: pointer; border: none; letter-spacing: .04em; text-transform: uppercase; }
+.mbtn-p { background: var(--gold); color: var(--bg); }.mbtn-p:hover{opacity:.85}
+.mbtn-s { background: var(--bg3); color: var(--text2); border: 1px solid var(--line2); }
+.hstep { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+.hnum { width: 20px; height: 20px; border-radius: 50%; background: color-mix(in srgb,var(--gold) 15%,transparent); color: var(--gold); font-size: 10px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.htxt { font-size: 11px; color: var(--text2); line-height: 1.7; }
+.htxt a { color: var(--gold); }
+.hstatus { font-size: 10px; margin-top: 8px; padding: 6px 10px; border-radius: var(--rs); }
+.hstatus.on { background: color-mix(in srgb,var(--green) 12%,transparent); color: var(--green); }
+.hstatus.off { background: var(--bg3); color: var(--text3); }
+
+/* ─── EMPTY STATE ─── */
+.empty { text-align: center; padding: 50px 20px; color: var(--text3); }
+.eico { font-size: 30px; margin-bottom: 10px; opacity: .35; }
+.etxt { font-size: 12px; line-height: 1.7; }
+
+/* ─── PLAN GRID ─── */
+.plan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+
+/* ─── MOBILE ─── */
+@media(max-width:520px) {
+  #sidebar { width: 50px; }
+  #cap-bar, #sync-bar { left: 50px; }
+  #pc { padding: 12px 14px 120px; }
+  .ph-title { font-size: 19px; }
+  .wgrid { gap: 2px; }
+  .dcol { padding: 5px 3px; }
+  .dname { font-size: 7px; }
+  .dnum { font-size: 13px; }
+  .dev { display: none; }
+  .mgrid { grid-template-columns: 1fr 1fr; }
+  .plan-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -170,419 +396,597 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--s
 
 <div id="sync-bar"></div>
 
-<div class="modal-ov" id="settingsModal" style="display:none">
-  <div class="modal-box">
-    <div class="modal-title">NastavenĂ­ Google</div>
-    <div class="modal-sub">Propoj Google ĂşÄŤet pro synchronizaci dat a pĹ™Ă­stup ke kalendĂˇĹ™i.</div>
-    <div class="hint-step"><div class="hint-num">1</div><div class="hint-txt"><a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> â†’ projekt â†’ povol Drive API + Calendar API</div></div>
-    <div class="hint-step"><div class="hint-num">2</div><div class="hint-txt">Credentials â†’ OAuth 2.0 Client ID â†’ Web application â†’ pĹ™idej <code style="color:var(--accent);font-size:11px">https://hanzalp-gif.github.io</code></div></div>
-    <div class="hint-step"><div class="hint-num">3</div><div class="hint-txt">ZkopĂ­ruj Client ID a vloĹľ sem:</div></div>
-    <label class="modal-lbl">Google OAuth Client ID</label>
-    <input class="modal-input" id="clientIdInp" type="text" placeholder="123456789.apps.googleusercontent.com">
-    <div id="drive-status" style="font-size:11px;color:var(--text3);margin-top:-6px;margin-bottom:10px"></div>
-    <div class="modal-actions">
-      <button class="modal-btn modal-secondary" onclick="closeSettings()">ZavĹ™Ă­t</button>
-      <button class="modal-btn modal-primary" onclick="saveSettings()">UloĹľit a pĹ™ipojit â†’</button>
+<!-- SETTINGS MODAL -->
+<div class="mov" id="settModal" style="display:none">
+  <div class="mbox">
+    <div class="mtitle">Nastaven&#237; Google</div>
+    <div class="msub">Propoj sv&#367;j Google &#250;&#269;et pro synchronizaci dat a p&#345;&#237;stup ke kalend&#225;&#345;i.</div>
+    <div class="hstep"><div class="hnum">1</div><div class="htxt"><a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a> &#8594; projekt &#8594; povol Google Drive API a Google Calendar API</div></div>
+    <div class="hstep"><div class="hnum">2</div><div class="htxt">Credentials &#8594; OAuth 2.0 Client ID &#8594; Web application &#8594; p&#345;idej <code style="color:var(--gold);font-size:10px">https://hanzalp-gif.github.io</code></div></div>
+    <div class="hstep"><div class="hnum">3</div><div class="htxt">Zkop&#237;ruj Client ID a vlo&#382; sem:</div></div>
+    <label class="mlbl">Google OAuth Client ID</label>
+    <input class="minp" id="cid-in" type="text" placeholder="123456789.apps.googleusercontent.com">
+    <div id="g-status" class="hstatus off">Nep&#345;ipojeno</div>
+    <div class="macts">
+      <button class="mbtn mbtn-s" onclick="closeSett()">Zav&#345;&#237;t</button>
+      <button class="mbtn mbtn-p" onclick="saveSett()">Ulo&#382;it a p&#345;ipojit</button>
     </div>
   </div>
 </div>
 
+<!-- APP -->
 <div id="app">
+
+  <!-- SIDEBAR -->
   <nav id="sidebar">
-    <div class="s-logo">
-      <svg viewBox="0 0 18 18" fill="none">
-        <circle cx="9" cy="9" r="7" stroke="#1a1a18" stroke-width="1.5"/>
-        <path d="M6 9h6M9 6v6" stroke="#1a1a18" stroke-width="1.8" stroke-linecap="round"/>
+    <div class="s-logo" onclick="openSett()" title="Nastaven&#237;">
+      <svg viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="6" stroke="#0f0f0d" stroke-width="1.5"/>
+        <path d="M5 8h6M8 5v6" stroke="#0f0f0d" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
     </div>
-    <div class="nav-item active" data-page="zapisnik" onclick="showPage('zapisnik')" title="ZĂˇpisnĂ­k">
+
+    <div class="nav-item active" data-p="zapisnik" onclick="go('zapisnik')" title="Z&#225;pisn&#237;k">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 5h12M4 8h8M4 11h10M4 14h6"/></svg>
-      <span class="nav-label">ZĂˇpisnĂ­k</span>
+      <span class="nav-lbl">Z&#225;pisn&#237;k</span>
     </div>
-    <div class="nav-item" data-page="tyden" onclick="showPage('tyden')" title="TĂ˝den">
+    <div class="nav-item" data-p="tyden" onclick="go('tyden')" title="T&#253;den">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v3M13 2v3M3 9h14"/></svg>
-      <span class="nav-label">TĂ˝den</span>
+      <span class="nav-lbl">T&#253;den</span>
     </div>
-    <div class="nav-item" data-page="projekty" onclick="showPage('projekty')" title="Projekty">
+    <div class="nav-item" data-p="projekty" onclick="go('projekty')" title="Projekty">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 6l7-3 7 3v8l-7 3-7-3V6z"/><path d="M10 3v14M3 6l7 4 7-4"/></svg>
-      <span class="nav-label">Projekty</span>
+      <span class="nav-lbl">Projekty</span>
     </div>
-    <div class="nav-item" data-page="metodika" onclick="showPage('metodika')" title="Metodika">
+    <div class="nav-item" data-p="metodika" onclick="go('metodika')" title="Metodika">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4h12v12H4zM8 4v12M12 8H8M12 12H8"/></svg>
-      <span class="nav-label">Metodika</span>
+      <span class="nav-lbl">Metodika</span>
     </div>
-    <div class="nav-item" data-page="rodina" onclick="showPage('rodina')" title="Rodina">
+    <div class="nav-item" data-p="rodina" onclick="go('rodina')" title="Rodina">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="6" r="2.5"/><path d="M4 17c0-3 2.2-5 5-5s5 2 5 5"/><circle cx="15" cy="8" r="1.8"/><path d="M17.5 17c0-2-1-3.5-2.5-3.5"/></svg>
-      <span class="nav-label">Rodina</span>
+      <span class="nav-lbl">Rodina</span>
     </div>
-    <div class="nav-item" data-page="osobni" onclick="showPage('osobni')" title="OsobnĂ­">
+    <div class="nav-item" data-p="osobni" onclick="go('osobni')" title="Osobn&#237;">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="8" r="3"/><path d="M4 18c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M14 4l1.5 1.5M16 8h1.5M14 12l1.5-1.5"/></svg>
-      <span class="nav-label">OsobnĂ­</span>
+      <span class="nav-lbl">Osobn&#237;</span>
     </div>
+
     <div class="nav-spacer"></div>
-    <div class="nav-item" onclick="weeklyReflection()" title="TĂ˝dennĂ­ reflexe">
+
+    <div class="nav-item" onclick="reflexe()" title="T&#253;denn&#237; reflexe">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.6 5.6l2.1 2.1M12.3 12.3l2.1 2.1M5.6 14.4l2.1-2.1M12.3 7.7l2.1-2.1"/></svg>
-      <span class="nav-label">Reflexe</span>
+      <span class="nav-lbl">Reflexe</span>
     </div>
-    <div class="nav-item" onclick="openSettings()" title="NastavenĂ­" style="position:relative">
+    <div class="nav-item" onclick="openSett()" title="Nastaven&#237; Google" style="position:relative">
       <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="10" cy="10" r="2.5"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.05 5.05l1.41 1.41M13.54 13.54l1.41 1.41M5.05 14.95l1.41-1.41M13.54 6.46l1.41-1.41"/></svg>
-      <span class="nav-label">ĂšÄŤet</span>
-      <div class="drive-dot" id="driveDot"></div>
+      <span class="nav-lbl">&#218;&#269;et</span>
+      <div class="g-dot" id="gdot"></div>
     </div>
   </nav>
+
+  <!-- MAIN -->
   <div id="main">
-    <div id="page-header"></div>
-    <div id="page-content"></div>
+    <div id="ph"></div>
+    <div id="pc"></div>
   </div>
 </div>
 
-<div id="capture-bar">
-  <button class="cap-btn cap-voice" id="voiceBtn" onclick="toggleVoice()" title="HlasovĂ˝ vstup">
+<!-- CAPTURE BAR -->
+<div id="cap-bar">
+  <button class="cbtn cbtn-voice" id="vbtn" onclick="voice()" title="Hlasov&#253; vstup">
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="7" y="2" width="6" height="10" rx="3"/><path d="M4 10c0 3.3 2.7 6 6 6s6-2.7 6-6M10 16v3"/></svg>
   </button>
-  <input type="text" id="cap-input" placeholder="NapiĹˇ cokoliv â€” AI zaĹ™adĂ­ sama..." autocomplete="off">
-  <button class="cap-btn cap-send" id="sendBtn" onclick="captureNote()">
+  <input type="text" id="cap-in" placeholder="Napi&#353; cokoliv &#8212; AI za&#345;ad&#237; sama..." autocomplete="off">
+  <button class="cbtn cbtn-send" id="sbtn" onclick="capture()">
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
   </button>
 </div>
 
 <script>
-const S={
-  page:'zapisnik', ctx:'DDM / krouĹľky',
-  entries:JSON.parse(localStorage.getItem('pb_entries')||'[]'),
-  osobni:JSON.parse(localStorage.getItem('pb_osobni')||'{"weight":[],"mood":[]}'),
-  calEvents:[], recording:false, recog:null
+// ═══ STATE ═══
+const S = {
+  page: 'zapisnik',
+  ctx: 'DDM / kroužky',
+  entries: JSON.parse(localStorage.getItem('pb_e') || '[]'),
+  osobni: JSON.parse(localStorage.getItem('pb_o') || '{"w":[],"m":[]}'),
+  calEvs: [],
+  rec: false,
+  recog: null
 };
 
-const CTX={
-  'DDM / krouĹľky':{cls:'m-ddm',color:'var(--teal)'},
-  'BESIP':{cls:'m-besip',color:'var(--blue)'},
-  'Ĺemeslo':{cls:'m-rem',color:'var(--accent)'},
-  'Metodika':{cls:'m-met',color:'var(--coral)'},
-  'Rodina':{cls:'m-rod',color:'var(--pink)'},
-  'OsobnĂ­':{cls:'m-osb',color:'var(--lav)'},
-  'DĹŻm / stavba':{cls:'m-dum',color:'var(--accent2)'}
+const CTX = {
+  'DDM / kroužky': {cls:'m-d', c:'var(--teal)'},
+  'BESIP':         {cls:'m-b', c:'var(--blue)'},
+  'Řemeslo':       {cls:'m-r', c:'var(--gold)'},
+  'Metodika':      {cls:'m-m', c:'var(--coral)'},
+  'Rodina':        {cls:'m-f', c:'var(--pink)'},
+  'Osobní':        {cls:'m-p', c:'var(--lav)'},
+  'Dům / stavba':  {cls:'m-h', c:'var(--green)'}
 };
 
-const G={
-  clientId:localStorage.getItem('pb_cid')||'',
-  token:null, fileId:localStorage.getItem('pb_fid')||'',
-  syncTimer:null, client:null
+// ═══ GOOGLE ═══
+const G = {
+  cid: localStorage.getItem('pb_cid') || '',
+  tok: null,
+  fid: localStorage.getItem('pb_fid') || '',
+  timer: null, client: null
 };
 
-function initGoogle(){
-  if(!G.clientId||typeof google==='undefined') return;
-  try{
-    G.client=google.accounts.oauth2.initTokenClient({
-      client_id:G.clientId,
-      scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly',
-      callback:(resp)=>{
-        if(resp.error){syncBar('err');return;}
-        G.token=resp.access_token;
-        dot('on'); syncBar('ok');
-        loadFromDrive();
-        syncCal();
+function gInit() {
+  if (!G.cid || typeof google === 'undefined') return;
+  try {
+    G.client = google.accounts.oauth2.initTokenClient({
+      client_id: G.cid,
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly',
+      callback: (r) => {
+        if (r.error) { sb('err'); return; }
+        G.tok = r.access_token;
+        dot('on'); sb('ok');
+        loadDrive();
+        calSync();
       }
     });
-    G.client.requestAccessToken({prompt:''});
-  }catch(e){console.warn('Google init:',e);}
+    G.client.requestAccessToken({prompt: ''});
+  } catch(e) { console.warn(e); }
 }
 
-async function syncCal(){
-  if(!G.token) return;
-  const now=new Date(); now.setHours(0,0,0,0);
-  const max=new Date(); max.setDate(now.getDate()+7);
-  try{
-    const lr=await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',{headers:{Authorization:`Bearer ${G.token}`}});
-    const ld=await lr.json();
-    let all=[];
-    for(const cal of (ld.items||[])){
-      try{
-        const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${now.toISOString()}&timeMax=${max.toISOString()}&singleEvents=true&orderBy=startTime`,{headers:{Authorization:`Bearer ${G.token}`}});
-        const d=await r.json();
-        if(d.items) all=all.concat(d.items.map(e=>({...e,calColor:cal.backgroundColor||'#6a9bc4'})));
-      }catch(e){}
+async function calSync() {
+  if (!G.tok) return;
+  const n = new Date(); n.setHours(0,0,0,0);
+  const mx = new Date(); mx.setDate(n.getDate() + 7);
+  try {
+    const lr = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {headers:{Authorization:`Bearer ${G.tok}`}});
+    const ld = await lr.json();
+    let all = [];
+    for (const cal of (ld.items||[])) {
+      try {
+        const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${n.toISOString()}&timeMax=${mx.toISOString()}&singleEvents=true&orderBy=startTime`,{headers:{Authorization:`Bearer ${G.tok}`}});
+        const d = await r.json();
+        if (d.items) all = all.concat(d.items.map(e => ({...e, cc: cal.backgroundColor||'#5888b8'})));
+      } catch(e) {}
     }
-    S.calEvents=Array.from(new Map(all.map(e=>[e.id,e])).values()).sort((a,b)=>new Date(a.start.dateTime||a.start.date)-new Date(b.start.dateTime||b.start.date));
-    if(S.page==='tyden') renderTyden();
-  }catch(e){console.warn('Cal:',e);}
+    S.calEvs = Array.from(new Map(all.map(e => [e.id,e])).values())
+      .sort((a,b) => new Date(a.start.dateTime||a.start.date) - new Date(b.start.dateTime||b.start.date));
+    if (S.page==='tyden') rTyden();
+  } catch(e) { console.warn(e); }
 }
 
-function saveLocal(){
-  localStorage.setItem('pb_entries',JSON.stringify(S.entries));
-  scheduleDrive();
+// ═══ DRIVE ═══
+function saveL() {
+  localStorage.setItem('pb_e', JSON.stringify(S.entries));
+  schedDrive();
 }
 
-function scheduleDrive(){
-  if(!G.token) return;
-  clearTimeout(G.syncTimer);
-  G.syncTimer=setTimeout(pushDrive,2500);
+function schedDrive() {
+  if (!G.tok) return;
+  clearTimeout(G.timer);
+  G.timer = setTimeout(pushDrive, 2500);
 }
 
-async function pushDrive(){
-  if(!G.token) return;
-  dot('busy'); syncBar('busy');
-  const data={entries:S.entries,osobni:S.osobni,synced:new Date().toISOString()};
-  try{
-    if(G.fileId){
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${G.fileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${G.token}`,'Content-Type':'application/json'},body:JSON.stringify(data)});
+async function pushDrive() {
+  if (!G.tok) return;
+  dot('busy'); sb('busy');
+  const data = {entries:S.entries, osobni:S.osobni, ts:new Date().toISOString()};
+  try {
+    if (G.fid) {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${G.fid}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${G.tok}`,'Content-Type':'application/json'},body:JSON.stringify(data)});
     } else {
-      const m=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${G.token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'petrs-brain.json',mimeType:'application/json'})}).then(r=>r.json());
-      G.fileId=m.id; localStorage.setItem('pb_fid',m.id);
-      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${G.fileId}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${G.token}`,'Content-Type':'application/json'},body:JSON.stringify(data)});
+      const m = await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${G.tok}`,'Content-Type':'application/json'},body:JSON.stringify({name:'petrs-brain.json',mimeType:'application/json'})}).then(r=>r.json());
+      G.fid = m.id; localStorage.setItem('pb_fid', m.id);
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${G.fid}?uploadType=media`,{method:'PATCH',headers:{Authorization:`Bearer ${G.tok}`,'Content-Type':'application/json'},body:JSON.stringify(data)});
     }
-    dot('on'); syncBar('ok');
-  }catch(e){dot(''); syncBar('err');}
+    dot('on'); sb('ok');
+  } catch(e) { dot(''); sb('err'); }
 }
 
-async function loadFromDrive(){
-  if(!G.token||!G.fileId) return;
-  try{
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${G.fileId}?alt=media`,{headers:{Authorization:`Bearer ${G.token}`}});
-    const d=await r.json();
-    if(d.entries&&d.entries.length>=S.entries.length){S.entries=d.entries;localStorage.setItem('pb_entries',JSON.stringify(S.entries));}
-    if(d.osobni){S.osobni=d.osobni;localStorage.setItem('pb_osobni',JSON.stringify(S.osobni));}
-    showPage(S.page);
-  }catch(e){}
+async function loadDrive() {
+  if (!G.tok || !G.fid) return;
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${G.fid}?alt=media`,{headers:{Authorization:`Bearer ${G.tok}`}});
+    const d = await r.json();
+    if (d.entries && d.entries.length >= S.entries.length) { S.entries = d.entries; localStorage.setItem('pb_e', JSON.stringify(S.entries)); }
+    if (d.osobni) { S.osobni = d.osobni; localStorage.setItem('pb_o', JSON.stringify(S.osobni)); }
+    go(S.page);
+  } catch(e) {}
 }
 
-function dot(s){const d=document.getElementById('driveDot');if(d)d.className='drive-dot'+(s?' '+s:'');}
-function syncBar(t){const b=document.getElementById('sync-bar');b.className='';void b.offsetWidth;b.className=t;}
+function dot(s) { const d=document.getElementById('gdot'); if(d) d.className='g-dot'+(s?' '+s:''); }
+function sb(t) { const b=document.getElementById('sync-bar'); b.className=''; void b.offsetWidth; b.className=t; }
 
-function openSettings(){
-  document.getElementById('settingsModal').style.display='flex';
-  document.getElementById('clientIdInp').value=G.clientId;
-  document.getElementById('drive-status').textContent=G.token?'AktuĂˇlnÄ› pĹ™ipojeno âś“':'NepĹ™ipojeno';
+// ═══ SETTINGS ═══
+function openSett() {
+  document.getElementById('settModal').style.display='flex';
+  document.getElementById('cid-in').value = G.cid;
+  const st = document.getElementById('g-status');
+  st.textContent = G.tok ? 'Připojeno a synchronizuji ✓' : 'Nepřipojeno';
+  st.className = 'hstatus ' + (G.tok ? 'on' : 'off');
 }
-function closeSettings(){document.getElementById('settingsModal').style.display='none';}
-function saveSettings(){
-  const cid=document.getElementById('clientIdInp').value.trim();
-  if(!cid) return;
-  G.clientId=cid; localStorage.setItem('pb_cid',cid);
-  closeSettings(); initGoogle();
+function closeSett() { document.getElementById('settModal').style.display='none'; }
+function saveSett() {
+  const v = document.getElementById('cid-in').value.trim();
+  if (!v) return;
+  G.cid = v; localStorage.setItem('pb_cid', v);
+  closeSett(); gInit();
 }
 
-const PAGE_CFG={
-  zapisnik:{title:'ZĂˇpisnĂ­k',sub:'ZachyĹĄ co se stalo',badge:'LIVE',bc:'var(--teal)',render:renderZapisnik},
-  tyden:{title:'TĂ˝den',sub:'KalendĂˇĹ™ a volnĂˇ okna',badge:'Tento tĂ˝den',bc:'var(--lav)',render:renderTyden},
-  projekty:{title:'Projekty',sub:'DĹŻm, zakĂˇzky, divadlo',badge:'3 aktivnĂ­',bc:'var(--accent)',render:renderProjekty},
-  metodika:{title:'Metodika',sub:'Principy z 20 let praxe',badge:'Roste',bc:'var(--coral)',render:renderMetodika},
-  rodina:{title:'Rodina',sub:'DÄ›ti, vztahy, spoleÄŤnĂ˝ ÄŤas',badge:'3 dÄ›ti',bc:'var(--pink)',render:renderRodina},
-  osobni:{title:'OsobnĂ­',sub:'ZdravĂ­, vĂˇha, psychika',badge:'PrivĂˇtnĂ­',bc:'var(--lav)',render:renderOsobni}
+// ═══ PAGES ═══
+const PAGES = {
+  zapisnik: {t:'Zápisník',   s:'Zachyť co se stalo — AI pomůže vytěžit', b:'Živý',      bc:'var(--teal)',  r:rZapisnik},
+  tyden:    {t:'Týden',      s:'Kalendář a volná okna',                   b:'Tento týden',bc:'var(--lav)',   r:rTyden},
+  projekty: {t:'Projekty',   s:'Dům, zakázky, divadlo KIVADLO',           b:'3 aktivní', bc:'var(--gold)',  r:rProjekty},
+  metodika: {t:'Metodika',   s:'Principy a poznatky z 20 let praxe',      b:'Roste',     bc:'var(--coral)', r:rMetodika},
+  rodina:   {t:'Rodina',     s:'Děti, vztahy, společný čas',              b:'3 děti',    bc:'var(--pink)',  r:rRodina},
+  osobni:   {t:'Osobní',     s:'Zdraví, váha, psychika — jen pro tebe',   b:'Privátní',  bc:'var(--lav)',   r:rOsobni}
 };
 
-function showPage(page){
-  S.page=page;
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-  const cfg=PAGE_CFG[page];
-  document.getElementById('page-header').innerHTML=`<div class="ph-row"><span class="ph-title">${cfg.title}</span><span class="ph-badge" style="background:color-mix(in srgb,${cfg.bc} 15%,transparent);color:${cfg.bc}">${cfg.badge}</span></div><div class="ph-sub">${cfg.sub}</div>`;
-  document.getElementById('page-content').innerHTML='';
-  cfg.render();
+function go(page) {
+  S.page = page;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.p===page));
+  const cfg = PAGES[page];
+  document.getElementById('ph').innerHTML = `
+    <div class="ph-top">
+      <span class="ph-title">${cfg.t}</span>
+      <span class="ph-badge" style="background:color-mix(in srgb,${cfg.bc} 14%,transparent);color:${cfg.bc}">${cfg.b}</span>
+    </div>
+    <div class="ph-sub">${cfg.s}</div>`;
+  document.getElementById('pc').innerHTML = '';
+  cfg.r();
 }
 
-function renderZapisnik(){
-  const el=document.getElementById('page-content');
-  el.innerHTML=`<div class="ctx-row" id="ctxRow">${Object.keys(CTX).map(k=>`<button class="ctx-pill ${CTX[k].cls}${k===S.ctx?' active':''}" onclick="setCtx('${k}')">${k}</button>`).join('')}</div><div class="sec-label">ZĂˇpisky</div><div id="entryList"></div>${S.entries.length===0?`<div class="empty"><div class="empty-ico">âś¦</div><div class="empty-txt">ZatĂ­m ĹľĂˇdnĂ© zĂˇpisky.<br>NapiĹˇ cokoliv do liĹˇty dole.</div></div>`:''}`;
-  renderEntries();
+// ═══ ZÁPISNÍK ═══
+function rZapisnik() {
+  const el = document.getElementById('pc');
+  el.innerHTML = `
+    <div class="ctx-row" id="cxr">
+      ${Object.keys(CTX).map(k=>`<button class="ctx-p ${CTX[k].cls}${k===S.ctx?' act':''}" onclick="setCtx('${k}')">${k}</button>`).join('')}
+    </div>
+    <div class="sec">Zápisky</div>
+    <div id="elist"></div>
+    ${!S.entries.length?`<div class="empty"><div class="eico">✦</div><div class="etxt">Zatím žádné zápisky.<br>Napiš cokoliv do lišty dole.</div></div>`:''}`;
+  renderEnt();
 }
 
-function setCtx(ctx){
-  S.ctx=ctx;
-  document.querySelectorAll('.ctx-pill').forEach(p=>p.classList.toggle('active',p.textContent===ctx));
-  document.getElementById('cap-input').placeholder=`ZĂˇpisek: ${ctx}...`;
+function setCtx(ctx) {
+  S.ctx = ctx;
+  document.querySelectorAll('.ctx-p').forEach(p => p.classList.toggle('act', p.textContent===ctx));
+  document.getElementById('cap-in').placeholder = `Zápisek: ${ctx}...`;
 }
 
-function renderEntries(){
-  const list=document.getElementById('entryList');
-  if(!list) return;
-  const items=S.entries.slice().reverse();
-  if(!items.length) return;
-  list.innerHTML=items.map(e=>{
-    const cfg=CTX[e.ctx]||CTX['DDM / krouĹľky'];
-    return `<div class="entry-card"><div class="entry-meta"><span class="ctx-tag ${cfg.cls}">${e.ctx}</span><span class="entry-time">${e.time}</span></div><div class="entry-text">${e.text.replace(/\n/g,'<br>')}</div>${e.loading?`<div class="ai-block"><div class="ai-lbl">Asistent</div><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`:e.ai?`<div class="ai-block"><div class="ai-lbl">Asistent</div>${e.ai.replace(/\n/g,'<br>')}</div>`:''}</div>`;
+function renderEnt() {
+  const list = document.getElementById('elist');
+  if (!list || !S.entries.length) return;
+  list.innerHTML = S.entries.slice().reverse().map(e => {
+    const cfg = CTX[e.ctx] || CTX['DDM / kroužky'];
+    return `<div class="ecard">
+      <div class="emeta"><span class="etag ${cfg.cls}">${e.ctx}</span><span class="etime">${e.time}</span></div>
+      <div class="etext">${e.text.replace(/\n/g,'<br>')}</div>
+      ${e.loading
+        ? `<div class="ai-blk"><div class="ai-lbl">Asistent</div><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`
+        : e.ai ? `<div class="ai-blk"><div class="ai-lbl">Asistent</div>${e.ai.replace(/\n/g,'<br>')}</div>` : ''}
+    </div>`;
   }).join('');
 }
 
-function renderTyden(){
-  const el=document.getElementById('page-content');
-  const today=new Date();
-  const dow=today.getDay();
-  const mon=new Date(today); mon.setDate(today.getDate()-(dow===0?6:dow-1));
-  const days=['Po','Ăšt','St','ÄŚt','PĂˇ','So','Ne'];
-  let wh='<div class="week-scroll"><div class="week-grid">';
-  for(let i=0;i<7;i++){
-    const d=new Date(mon); d.setDate(mon.getDate()+i);
-    const isToday=d.toDateString()===today.toDateString();
-    const evs=S.calEvents.filter(e=>new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
-    wh+=`<div class="day-col${isToday?' today':''}"><div class="day-name">${days[i]}</div><div class="day-num">${d.getDate()}</div>${evs.map(e=>`<div class="day-event" style="background:color-mix(in srgb,${e.calColor||'var(--blue)'} 20%,transparent);color:${e.calColor||'var(--blue)'}">${e.start.dateTime?new Date(e.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':''} ${(e.summary||'').slice(0,18)}</div>`).join('')}${evs.length===0?`<div class="day-free">volno</div>`:''}</div>`;
+// ═══ TÝDEN ═══
+function rTyden() {
+  const el = document.getElementById('pc');
+  const today = new Date();
+  const dow = today.getDay();
+  const mon = new Date(today); mon.setDate(today.getDate() - (dow===0?6:dow-1));
+  const days = ['Po','Út','St','Čt','Pá','So','Ne'];
+
+  let wh = '<div class="wcal"><div class="wgrid">';
+  for (let i=0;i<7;i++) {
+    const d = new Date(mon); d.setDate(mon.getDate()+i);
+    const isT = d.toDateString()===today.toDateString();
+    const evs = S.calEvs.filter(e => new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
+    wh += `<div class="dcol${isT?' today':''}">
+      <div class="dname">${days[i]}</div>
+      <div class="dnum">${d.getDate()}</div>
+      ${evs.map(e=>`<div class="dev" style="background:color-mix(in srgb,${e.cc} 22%,transparent);color:${e.cc}">
+        ${e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':''} ${(e.summary||'').slice(0,20)}
+      </div>`).join('')}
+      ${!evs.length ? `<div class="dfree">volno</div>` : ''}
+    </div>`;
   }
-  wh+='</div></div>';
-  const fw=computeWindows();
-  el.innerHTML=`<button class="cal-btn" onclick="calSync()"><svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v3M13 2v3M3 9h14"/></svg>${G.token?'Aktualizovat kalendĂˇĹ™':'PĹ™ipojit Google KalendĂˇĹ™ â†’'}</button><div class="sec-label">Tento tĂ˝den</div>${wh}<div class="sec-label">VolnĂˇ okna</div>${fw.map(w=>`<div class="free-win"><div class="fw-dot"></div><div style="flex:1"><div class="fw-time">${w.label}</div><div class="fw-desc">${w.desc}</div></div><span class="fw-tag">${w.dur}</span></div>`).join('')}<div class="sec-label" style="margin-top:18px">NaplĂˇnovat</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${['ZakĂˇzka','VĂ˝let s dcerou','SchĹŻzka','PrĂˇce na domÄ›','OsobnĂ­ ÄŤas','JinĂ©'].map(t=>`<button class="action-btn" onclick="quickPlan('${t}')">${t}</button>`).join('')}</div>`;
+  wh += '</div></div>';
+
+  const fw = freeWindows();
+  el.innerHTML = `
+    <button class="cal-sync" onclick="${G.tok?'calSync()':'openSett()'}">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v3M13 2v3M3 9h14"/></svg>
+      ${G.tok ? 'Aktualizovat kalendář' : 'Připojit Google Kalendář →'}
+    </button>
+    <div class="sec">Tento týden</div>
+    ${wh}
+    <div class="sec">Volná okna</div>
+    ${fw.map(w=>`<div class="fwin">
+      <div class="fwin-dot"></div>
+      <div style="flex:1"><div class="fwin-t">${w.lbl}</div><div class="fwin-s">${w.desc}</div></div>
+      <span class="fwin-tag">${w.dur}</span>
+    </div>`).join('')}
+    ${!fw.length ? '<div style="font-size:11px;color:var(--text3);text-align:center;padding:14px">Propoj kalendář pro zobrazení volných oken</div>' : ''}
+    <div class="sec" style="margin-top:20px">Naplánovat</div>
+    <div class="plan-grid">
+      ${['Zakázka','Výlet s dcerou','Schůzka','Práce na domě','Osobní čas','Jiné'].map(t=>`
+        <button class="abt" onclick="planIt('${t}')">${t}<span class="abt-arr">→</span></button>`).join('')}
+    </div>`;
 }
 
-function computeWindows(){
-  const today=new Date(); const out=[];
-  for(let i=0;i<7;i++){
-    const d=new Date(today); d.setDate(today.getDate()+i);
-    const evs=S.calEvents.filter(e=>{const ed=new Date(e.start.dateTime||e.start.date);return ed.toDateString()===d.toDateString()&&e.start.dateTime;});
-    const dn=d.toLocaleDateString('cs-CZ',{weekday:'long'});
-    const df=d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'});
-    if(evs.length===0){out.push({label:`${dn} ${df} â€” celĂ˝ den`,desc:'Ĺ˝ĂˇdnĂ© udĂˇlosti v kalendĂˇĹ™i',dur:'celĂ˝ den'});}
-    else{
-      const starts=evs.map(e=>new Date(e.start.dateTime).getHours());
-      const ends=evs.map(e=>new Date(e.end?.dateTime||e.start.dateTime).getHours());
-      const earl=Math.min(...starts); const late=Math.max(...ends);
-      if(earl>9) out.push({label:`${dn} rĂˇno do ${earl}:00`,desc:'VolnĂ© okno pĹ™ed prvnĂ­m blokem',dur:`${earl-7}h`});
-      if(late<17) out.push({label:`${dn} od ${late}:00`,desc:'VolnĂ˝ blok odpoledne',dur:`${17-late}+ hod`});
+function freeWindows() {
+  const today = new Date();
+  const out = [];
+  for (let i=0;i<7;i++) {
+    const d = new Date(today); d.setDate(today.getDate()+i);
+    const evs = S.calEvs.filter(e => {
+      const ed = new Date(e.start.dateTime||e.start.date);
+      return ed.toDateString()===d.toDateString() && e.start.dateTime;
+    });
+    const dn = d.toLocaleDateString('cs-CZ',{weekday:'long'});
+    const df = d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'});
+    if (!evs.length) {
+      out.push({lbl:`${dn} ${df} — celý den`, desc:'Žádné události — ideální pro zakázku nebo výlet', dur:'celý den'});
+    } else {
+      const starts = evs.map(e=>new Date(e.start.dateTime).getHours());
+      const ends = evs.map(e=>new Date(e.end?.dateTime||e.start.dateTime).getHours());
+      const earl = Math.min(...starts); const late = Math.max(...ends);
+      if (earl > 9) out.push({lbl:`${dn} ráno do ${earl}:00`, desc:'Volné okno před prvním blokem', dur:`${earl-7}h`});
+      if (late < 17) out.push({lbl:`${dn} od ${late}:00`, desc:'Volný blok odpoledne', dur:`${17-late}+ hod`});
     }
-    if(out.length>=5) break;
+    if (out.length >= 5) break;
   }
   return out.slice(0,5);
 }
 
-function calSync(){if(!G.token){openSettings();return;}syncCal();}
-function quickPlan(t){document.getElementById('cap-input').value=`NaplĂˇnovat: ${t} â€” `;document.getElementById('cap-input').focus();}
+function planIt(t) {
+  document.getElementById('cap-in').value = `Naplánovat: ${t} — `;
+  document.getElementById('cap-in').focus();
+}
 
-function renderProjekty(){
-  const projs=[
-    {name:'DĹŻm na pozemku',status:'active',pct:15,desc:'PĹ™Ă­prava projektu a stavebnĂ­ho povolenĂ­. Pozemek pĹ™ipraven.',color:'var(--accent2)'},
-    {name:'Podlaha â€” nivelace + vinyl',status:'active',pct:60,desc:'HiKOKI UM16VST2 objednĂˇn. StÄ›rka pĹ™es keramiku, vinyl click.',color:'var(--accent)'},
-    {name:'KIVADLO â€” zvuk & svÄ›tla',status:'active',pct:80,desc:'Denon AVR-X4400H + Strand 200. BuzenĂ­ ve foyer vyĹ™eĹˇeno.',color:'var(--lav)'},
-    {name:'Metodika â€” PDF produkt',status:'paused',pct:25,desc:'Obsah roste zĂˇpisek po zĂˇpisku. CĂ­l: PDF + workshopy.',color:'var(--coral)'},
-    {name:'Van â€” Renault Trafic',status:'planned',pct:5,desc:'Trafic Combi 1.9/2.0 dCi doporuÄŤen mechanikem.',color:'var(--blue)'}
+// ═══ PROJEKTY ═══
+function rProjekty() {
+  const projs = [
+    {n:'Dům na pozemku', st:'a', pct:15, desc:'Příprava projektu a stavebního povolení. Pozemek ve Světlé nad Sázavou připraven.', c:'var(--green)'},
+    {n:'Podlaha — nivelace + vinyl', st:'a', pct:60, desc:'HiKOKI UM16VST2 mixér objednán. Samonivelační stěrka přes keramiku, vinyl click finish.', c:'var(--gold)'},
+    {n:'KIVADLO — zvuk & světla', st:'a', pct:80, desc:'Denon AVR-X4400H + Ecler panel + Strand 200. Buzení ve foyer vyřešeno.', c:'var(--lav)'},
+    {n:'Metodika — PDF produkt', st:'p', pct:25, desc:'Obsah roste zápisek po zápisku. Cíl: prodejný PDF + živé workshopy.', c:'var(--coral)'},
+    {n:'Van — Renault Trafic', st:'n', pct:5, desc:'Trafic Combi 1.9 nebo 2.0 dCi doporučen mechanikem. Hledat na bazarech.', c:'var(--blue)'}
   ];
-  document.getElementById('page-content').innerHTML=projs.map(p=>`<div class="proj-card"><div class="proj-hdr"><span class="proj-name">${p.name}</span><span class="proj-st ${p.status==='active'?'s-act':p.status==='paused'?'s-pau':'s-pla'}">${p.status==='active'?'AktivnĂ­':p.status==='paused'?'Pozastaveno':'PlĂˇnovĂˇno'}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${p.pct}%;background:${p.color}"></div></div><div style="font-size:10px;color:var(--text3);margin-bottom:5px">${p.pct}%</div><div class="proj-desc">${p.desc}</div></div>`).join('');
+  document.getElementById('pc').innerHTML = projs.map(p=>`
+    <div class="pcard">
+      <div class="phdr">
+        <span class="pname">${p.n}</span>
+        <span class="pst ${p.st==='a'?'st-a':p.st==='p'?'st-p':'st-n'}">${p.st==='a'?'Aktivní':p.st==='p'?'Pozastaveno':'Plánováno'}</span>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${p.pct}%;background:${p.c}"></div></div>
+      <div style="font-size:9px;color:var(--text3);margin-bottom:6px">${p.pct}% dokončeno</div>
+      <div class="pdesc">${p.desc}</div>
+    </div>`).join('');
 }
 
-function renderMetodika(){
-  const principles=[
-    {title:'ZmÄ›Ĺ strukturu, ne chovĂˇnĂ­ dĂ­tÄ›te',text:'KdyĹľ hra vyĹľaduje spoluprĂˇci, dÄ›ti spolupracujĂ­. NenĂ­ potĹ™eba Ĺ™Ă­kat "buÄŹ kamarĂˇd" â€” staÄŤĂ­ nastavit pravidla.'},
-    {title:'DÄ›ti se chovajĂ­ dobĹ™e, protoĹľe hra to vyĹľaduje',text:'DisciplĂ­na neplyne z autority, ale z dobĹ™e navrĹľenĂ© aktivity. Ĺ patnĂ© chovĂˇnĂ­ signalizuje nevhodnou hru.'},
-    {title:'JSME TĂťM â€” rituĂˇl uzavĹ™enĂ­',text:'KaĹľdĂ˝ krouĹľek konÄŤĂ­ kruhem. KaĹľdĂ˝ Ĺ™ekne jedno slovo co si odnĂˇĹˇĂ­. Ritual tvoĹ™Ă­ identitu skupiny.'},
-    {title:'DĂ­tÄ› u ĹľebĹ™in â€” pĹ™Ă­bÄ›h trpÄ›livosti',text:'TĹ™i mÄ›sĂ­ce sedÄ›lo u ĹľebĹ™in. Pak pĹ™iĹˇlo samo. Tlak nestaÄŤĂ­ â€” dĹŻvÄ›ra a ÄŤas ano.'},
-    {title:'Ĺepas â€” kooperativnĂ­ hra',text:'Hra vynalezenĂˇ spolu s dÄ›tmi. KaĹľdĂ˝ hrĂˇÄŤ je nenahraditelnĂ˝. VĂ­tÄ›z je celĂ˝ tĂ˝m.'}
+// ═══ METODIKA ═══
+function rMetodika() {
+  const pr = [
+    {t:'Změň strukturu, ne chování dítěte', b:'Když hra vyžaduje spolupráci, děti spolupracují. Není potřeba říkat "buď kamarád" — stačí nastavit pravidla hry.'},
+    {t:'Děti se chovají dobře, protože hra to vyžaduje', b:'Disciplína neplyne z autority, ale z dobře navržené aktivity. Špatné chování je signál nevhodné hry.'},
+    {t:'JSME TÝM — rituál uzavření', b:'Každý kroužek končí kruhem. Každý řekne jedno slovo co si odnáší. Ritual tvoří identitu skupiny.'},
+    {t:'Dítě u žebřin — příběh trpělivosti', b:'Tři měsíce sedělo u žebřin. Pak přišlo samo. Tlak nestačí — důvěra a čas ano.'},
+    {t:'Řepas — kooperativní hra', b:'Hra vynalezená spolu s dětmi. Každý hráč je nenahraditelný. Vítěz je celý tým.'}
   ];
-  const me=S.entries.filter(e=>e.ctx==='DDM / krouĹľky'||e.ctx==='Metodika');
-  document.getElementById('page-content').innerHTML=`<div class="sec-label">Principy</div>${principles.map(p=>`<div class="prin-card"><div class="prin-title">${p.title}</div><div class="prin-text">${p.text}</div><div class="prin-src">20+ let praxe</div></div>`).join('')}${me.length?`<div class="sec-label">Ze zĂˇpisnĂ­ku â†’ metodika</div>${me.slice(-3).reverse().map(e=>`<div class="card-sm" style="border-left:2px solid var(--coral)"><div style="font-size:12px;color:var(--text2);margin-bottom:4px">${e.text.slice(0,120)}${e.text.length>120?'â€¦':''}</div><div style="font-size:10px;color:var(--text3)">${e.time} Â· ${e.ctx}</div></div>`).join('')}`:''}<button class="action-btn" style="margin-top:14px" onclick="askAI('ProhlĂ©dni zĂˇpisky z DDM a navrhni novĂ˝ princip metodiky na zĂˇkladÄ› vzorcĹŻ kterĂ© vidĂ­Ĺˇ.')">Generovat novĂ˝ princip ze zĂˇpiskĹŻ â†’</button>`;
+  const me = S.entries.filter(e=>e.ctx==='DDM / kroužky'||e.ctx==='Metodika');
+  document.getElementById('pc').innerHTML = `
+    <div class="sec">Principy</div>
+    ${pr.map(p=>`<div class="princ"><div class="pt">${p.t}</div><div class="pb-txt">${p.b}</div><div class="psrc">20+ let praxe</div></div>`).join('')}
+    ${me.length ? `
+      <div class="sec">Ze zápisníku → metodika</div>
+      ${me.slice(-3).reverse().map(e=>`<div class="ecard" style="border-left:2px solid var(--coral)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">${e.text.slice(0,130)}${e.text.length>130?'…':''}</div>
+        <div style="font-size:9px;color:var(--text3)">${e.time} · ${e.ctx}</div>
+      </div>`).join('')}` : ''}
+    <button class="abt" style="margin-top:14px" onclick="askAI('Prohlédni zápisky z DDM kroužků a navrhni nový princip metodiky na základě vzorců které vidíš.')">
+      Generovat nový princip ze zápisků<span class="abt-arr">→</span>
+    </button>
+    <button class="abt" onclick="askAI('Pomoz mi sepsat první autentický text o pedagogické metodice pro skupinu učitelů na Facebooku — neakademicky, z praxe, konkrétně.')">
+      Napsat první post pro učitele<span class="abt-arr">→</span>
+    </button>`;
 }
 
-function renderRodina(){
-  const children=[
-    {name:'Dcera',age:10,av:'D',avBg:'color-mix(in srgb,var(--pink) 20%,transparent)',avC:'var(--pink)',note:'Podpora dennĂ­ho rytmu a stravy. ÄŚas spolu hlavnÄ› odpoledne a vĂ­kendy.',tags:['strava','nĂˇlada','rytmus','pohyb']},
-    {name:'Syn',age:17,av:'S',avBg:'color-mix(in srgb,var(--blue) 20%,transparent)',avC:'var(--blue)',note:'Nechat prostor, bĂ˝t dostupnĂ˝. Sledovat co ho bavĂ­.',tags:['sport','Ĺˇkola','samostatnost']},
-    {name:'Syn',age:21,av:'S',avBg:'color-mix(in srgb,var(--accent2) 20%,transparent)',avC:'var(--accent2)',note:'DospÄ›lĂ˝ â€” spĂ­Ĺˇ kamarĂˇdskĂ˝ vztah. MyĹˇlenka: jednou spoleÄŤnĂ˝ projekt.',tags:['dospÄ›lĂ˝','projekt','spoluprĂˇce']}
+// ═══ RODINA ═══
+function rRodina() {
+  const kids = [
+    {nm:'Dcera', age:10, av:'D', bg:'color-mix(in srgb,var(--pink) 18%,transparent)', c:'var(--pink)',
+     note:'Podpora denního rytmu a stravy. Čas spolu hlavně odpoledne a víkendy. Výkyvy nálad — být přítomen, nekritizovat.',
+     tags:['strava','nálada','rytmus','pohyb','škola']},
+    {nm:'Syn', age:17, av:'S', bg:'color-mix(in srgb,var(--blue) 18%,transparent)', c:'var(--blue)',
+     note:'Nechávat prostor, být dostupný. Zajímat se bez dotírání.',
+     tags:['sport','škola','samostatnost','vztahy']},
+    {nm:'Syn', age:21, av:'S', bg:'color-mix(in srgb,var(--green) 18%,transparent)', c:'var(--green)',
+     note:'Dospělý — kamarádský vztah. Potenciál společného projektu v budoucnu.',
+     tags:['dospělý','projekt','spolupráce','řemeslo']}
   ];
-  const re=S.entries.filter(e=>e.ctx==='Rodina');
-  document.getElementById('page-content').innerHTML=`<div class="sec-label">DÄ›ti</div>${children.map(c=>`<div class="child-card"><div class="child-hdr"><div class="child-av" style="background:${c.avBg};color:${c.avC}">${c.av}</div><div><div class="child-name">${c.name}</div><div class="child-age">${c.age} let</div></div><button onclick="quickNote('Rodina','${c.name} (${c.age} let): ')" style="margin-left:auto;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--rs);padding:4px 9px;color:var(--text3);font-family:var(--sans);font-size:11px;cursor:pointer">+ zĂˇpisek</button></div><div class="child-note">${c.note}</div><div class="child-tags">${c.tags.map(t=>`<span class="child-tag">${t}</span>`).join('')}</div></div>`).join('')}${re.length?`<div class="sec-label">RodinnĂ© zĂˇpisky</div>${re.slice(-3).reverse().map(e=>`<div class="card-sm"><div style="font-size:12px;color:var(--text2)">${e.text.slice(0,100)}â€¦</div><div style="font-size:10px;color:var(--text3);margin-top:4px">${e.time}</div></div>`).join('')}`:''}
-  <div class="sec-label">Podpora</div>
-  <button class="action-btn" onclick="askAI('Navrhni aktivitu pro tatĂ­nka a 10letou dceru na vĂ­kendovĂ© odpoledne â€” venku, aktivnÄ›, bez digitĂˇlnĂ­ch zaĹ™Ă­zenĂ­.')">Navrhnout aktivitu pro dceru â†’</button>
-  <button class="action-btn" onclick="askAI('Jak mohu jako tĂˇta lĂ©pe podporovat desetiletou dceru s nepravidelnĂ˝m dennĂ­m rytmem a vĂ˝kyvy nĂˇlad, kdyĹľ s nĂ­ trĂˇvĂ­m hlavnÄ› odpoledne a vĂ­kendy?')">Jak lĂ©pe podporovat dceru â†’</button>`;
+  const re = S.entries.filter(e=>e.ctx==='Rodina');
+  document.getElementById('pc').innerHTML = `
+    <div class="sec">Děti</div>
+    ${kids.map(k=>`<div class="ccard">
+      <div class="chdr">
+        <div class="cav" style="background:${k.bg};color:${k.c}">${k.av}</div>
+        <div><div class="cnm">${k.nm}</div><div class="cage">${k.age} let</div></div>
+        <button onclick="quickNote('Rodina','${k.nm} (${k.age} let): ')" style="margin-left:auto;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--rs);padding:4px 9px;color:var(--text3);font-family:var(--sans);font-size:10px;cursor:pointer">+ zápisek</button>
+      </div>
+      <div class="cnote">${k.note}</div>
+      <div class="ctags">${k.tags.map(t=>`<span class="ctag">${t}</span>`).join('')}</div>
+    </div>`).join('')}
+    ${re.length ? `<div class="sec">Rodinné zápisky</div>${re.slice(-3).reverse().map(e=>`<div class="ecard"><div style="font-size:12px;color:var(--text2)">${e.text.slice(0,120)}…</div><div style="font-size:9px;color:var(--text3);margin-top:4px">${e.time}</div></div>`).join('')}` : ''}
+    <div class="sec">Podpora</div>
+    <button class="abt" onclick="askAI('Navrhni aktivitu pro tatínka a 10letou dceru na víkendové odpoledne — venku, aktivně, bez digitálních zařízení. Konkrétně a prakticky.')">
+      Navrhnout aktivitu pro dceru<span class="abt-arr">→</span>
+    </button>
+    <button class="abt" onclick="askAI('Jak mohu jako táta lépe podporovat desetiletou dceru s nepravidelným denním rytmem a výkyvy nálad, když s ní trávím hlavně odpoledne a víkendy? Konkrétní malé kroky.')">
+      Jak lépe podporovat dceru<span class="abt-arr">→</span>
+    </button>`;
 }
 
-function renderOsobni(){
-  const lw=S.osobni.weight.slice(-1)[0];
-  const cw=lw?lw.v:186;
-  const lost=196-cw;
-  const h=new Date().getHours();
-  const inW=h>=12&&h<20;
-  const fLabel=inW?`jeĹˇ do 20:00`:h<12?`okno za ${12-h}h`:`okno zĂ­tra`;
-  document.getElementById('page-content').innerHTML=`
-  <div class="sec-label">DneĹˇnĂ­ stav</div>
-  <div class="mood-row">${['đź´','đź','đź™‚','đźŠ','âšˇ'].map((m,i)=>`<button class="mood-btn" onclick="logMood(${i},this)" title="${['vyÄŤerpanĂ˝','unavenĂ˝','OK','dobĹ™e','plnĂˇ energie'][i]}">${m}</button>`).join('')}</div>
-  <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:14px">Jak se dnes cĂ­tĂ­Ĺˇ?</div>
-  <div class="metric-grid">
-    <div class="metric-card"><div class="metric-lbl">VĂˇha</div><div class="metric-val">${cw}</div><div class="metric-sub">kg Â· 186 cm</div><div class="metric-trend t-up">â†“ ${lost} kg od startu</div></div>
-    <div class="metric-card"><div class="metric-lbl">LaÄŤnÄ›nĂ­ 16/8</div><div class="metric-val" style="font-size:16px;padding-top:6px">${fLabel}</div><div class="metric-sub">${inW?'okno aktivnĂ­':'pĹŻst probĂ­hĂˇ'}</div><div class="metric-trend" style="color:var(--lav)">aktivnĂ­</div></div>
-    <div class="metric-card"><div class="metric-lbl">CĂ­l</div><div class="metric-val">176</div><div class="metric-sub">kg Â· zbĂ˝vĂˇ ${cw-176} kg</div><div class="metric-trend t-up">postupnÄ›</div></div>
-    <div class="metric-card"><div class="metric-lbl">ZĂˇpisky</div><div class="metric-val">${S.entries.filter(e=>e.ctx==='OsobnĂ­').length}</div><div class="metric-sub">osobnĂ­ch zĂˇznamĹŻ</div></div>
-  </div>
-  <div class="sec-label">Zaznamenat vĂˇhu</div>
-  <div style="display:flex;gap:7px;margin-bottom:14px">
-    <input type="number" id="wInp" placeholder="kg" step="0.1" min="50" max="250" style="flex:1;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--rs);padding:8px 11px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none">
-    <button onclick="logWeight()" style="background:var(--lav);color:var(--bg);border:none;border-radius:var(--rs);padding:8px 14px;font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer">UloĹľit</button>
-  </div>
-  <div class="sec-label">Reflexe</div>
-  <button class="action-btn" onclick="askAI('Jsem Petr, 186 cm, vĂˇha ${cw} kg (zaÄŤĂ­nal jsem na 196 kg), praktikuji 16/8 laÄŤnÄ›nĂ­ a silovĂ˝ trĂ©nink 4x tĂ˝dnÄ›. Jak si vedu a co bych mohl zlepĹˇit?')">ZhodnoĹĄ mĹŻj pokrok â†’</button>
-  <button class="action-btn" onclick="askAI('Jako ÄŤlovÄ›k kterĂ˝ dlouho dĂˇval ostatnĂ­m a teÄŹ chce investovat do sebe â€” jakĂ© malĂ© konkrĂ©tnĂ­ kroky pomĹŻĹľou.')">PĂ©ÄŤe o sebe â€” jak zaÄŤĂ­t â†’</button>`;
+// ═══ OSOBNÍ ═══
+function rOsobni() {
+  const lw = S.osobni.w.slice(-1)[0];
+  const cw = lw ? lw.v : 186;
+  const lost = 196 - cw;
+  const h = new Date().getHours();
+  const inW = h>=12 && h<20;
+  const fLbl = inW ? `ješ do 20:00` : h<12 ? `okno za ${12-h}h` : `okno zítra v 12:00`;
+
+  document.getElementById('pc').innerHTML = `
+    <div class="sec">Dnešní stav</div>
+    <div class="moodrow">
+      ${['😴','😐','🙂','😊','⚡'].map((m,i)=>`<button class="moodbtn" onclick="logMood(${i},this)" title="${['vyčerpaný','unavený','OK','dobře','plná energie'][i]}">${m}</button>`).join('')}
+    </div>
+    <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:16px">Jak se dnes cítíš?</div>
+    <div class="mgrid">
+      <div class="mcard">
+        <div class="mlbl">Váha</div>
+        <div class="mval">${cw}</div>
+        <div class="msub">kg · 186 cm</div>
+        <div class="mtrend tup">↓ ${lost} kg od startu</div>
+      </div>
+      <div class="mcard">
+        <div class="mlbl">Lačnění 16/8</div>
+        <div class="mval" style="font-size:15px;padding-top:8px">${fLbl}</div>
+        <div class="msub">${inW?'jídelní okno aktivní':'půst probíhá'}</div>
+        <div class="mtrend" style="color:var(--lav)">aktivní</div>
+      </div>
+      <div class="mcard">
+        <div class="mlbl">Cíl</div>
+        <div class="mval">176</div>
+        <div class="msub">kg · zbývá ${cw-176} kg</div>
+        <div class="mtrend tup">postupně</div>
+      </div>
+      <div class="mcard">
+        <div class="mlbl">Zápisky</div>
+        <div class="mval">${S.entries.filter(e=>e.ctx==='Osobní').length}</div>
+        <div class="msub">osobních záznamů</div>
+        <div class="mtrend" style="color:var(--text3)">tento měsíc</div>
+      </div>
+    </div>
+    <div class="sec">Zaznamenat váhu</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <input type="number" id="winp" placeholder="kg" step="0.1" min="50" max="250"
+        style="flex:1;background:var(--bg3);border:1px solid var(--line2);border-radius:var(--rs);padding:9px 12px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none">
+      <button onclick="logW()" style="background:var(--lav);color:var(--bg);border:none;border-radius:var(--rs);padding:9px 16px;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;text-transform:uppercase;letter-spacing:.04em">Uložit</button>
+    </div>
+    <div class="sec">Reflexe</div>
+    <button class="abt" onclick="askAI('Jsem Petr, 186 cm, váha ${cw} kg (začínal jsem na 196 kg), praktikuji 16/8 lačnění a silový trénink 4x týdně. Zhodnoť můj pokrok a navrhni co upravit.')">
+      Zhodnoť můj pokrok<span class="abt-arr">→</span>
+    </button>
+    <button class="abt" onclick="askAI('Jako člověk který léta dával ostatním a teď chce investovat do sebe — zdraví, psychika, energie — navrhni malé konkrétní kroky které půjdou zakomponovat do nabitého dne.')">
+      Jak pečovat o sebe<span class="abt-arr">→</span>
+    </button>
+    <button class="abt" onclick="askAI('Navrhni jednoduchý jídelní plán na týden odpovídající 16/8 lačnění, fyzicky náročné práci a cíli hubnout. Z dostupných českých potravin, prakticky.')">
+      Jídelní plán na týden<span class="abt-arr">→</span>
+    </button>`;
 }
 
-function logMood(level,btn){
-  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('sel'));
+function logMood(level, btn) {
+  document.querySelectorAll('.moodbtn').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');
-  const labels=['vyÄŤerpanĂ˝','unavenĂ˝','OK','dobĹ™e','plnĂˇ energie'];
-  const e={id:Date.now(),ctx:'OsobnĂ­',text:`NĂˇlada: ${labels[level]}`,time:nowStr(),ai:null,loading:false};
-  S.entries.push(e); saveLocal();
+  const lbs=['vyčerpaný','unavený','OK','dobře','plná energie'];
+  const e={id:Date.now(),ctx:'Osobní',text:`Nálada: ${lbs[level]}`,time:ts(),ai:null,loading:false};
+  S.entries.push(e); saveL();
 }
 
-function logWeight(){
-  const inp=document.getElementById('wInp');
-  const val=parseFloat(inp.value);
-  if(!val||val<50||val>250) return;
-  S.osobni.weight.push({v:val,t:Date.now()});
-  localStorage.setItem('pb_osobni',JSON.stringify(S.osobni));
-  inp.value=''; scheduleDrive(); showPage('osobni');
+function logW() {
+  const inp = document.getElementById('winp');
+  const v = parseFloat(inp.value);
+  if (!v||v<50||v>250) return;
+  S.osobni.w.push({v,t:Date.now()});
+  localStorage.setItem('pb_o', JSON.stringify(S.osobni));
+  inp.value=''; schedDrive(); go('osobni');
 }
 
-async function captureNote(){
-  const inp=document.getElementById('cap-input');
-  const text=inp.value.trim(); if(!text) return;
-  const btn=document.getElementById('sendBtn');
-  btn.disabled=true; inp.value='';
-  const entry={id:Date.now(),ctx:S.ctx,text,time:nowStr(),ai:null,loading:true};
-  S.entries.push(entry); saveLocal();
-  if(S.page==='zapisnik') renderEntries();
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,system:buildPrompt(entry.ctx),messages:[{role:'user',content:text}]})});
-    const data=await resp.json();
-    entry.ai=data.content?.find(b=>b.type==='text')?.text||'';
-    entry.loading=false;
-  }catch(e){entry.ai='Chyba pĹ™ipojenĂ­.';entry.loading=false;}
-  saveLocal();
-  if(S.page==='zapisnik') renderEntries();
-  btn.disabled=false;
+// ═══ CAPTURE + AI ═══
+async function capture() {
+  const inp = document.getElementById('cap-in');
+  const text = inp.value.trim(); if (!text) return;
+  const btn = document.getElementById('sbtn');
+  btn.disabled = true; inp.value = '';
+
+  const entry = {id:Date.now(), ctx:S.ctx, text, time:ts(), ai:null, loading:true};
+  S.entries.push(entry); saveL();
+  if (S.page==='zapisnik') renderEnt();
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        system: sysPrompt(entry.ctx),
+        messages:[{role:'user',content:text}]
+      })
+    });
+    const data = await resp.json();
+    entry.ai = data.content?.find(b=>b.type==='text')?.text || '';
+    entry.loading = false;
+  } catch(e) {
+    entry.ai = 'Chyba připojení.';
+    entry.loading = false;
+  }
+
+  saveL();
+  if (S.page==='zapisnik') renderEnt();
+  btn.disabled = false;
 }
 
-async function askAI(prompt){
-  document.getElementById('cap-input').value=prompt;
-  await captureNote();
-  showPage('zapisnik');
+async function askAI(prompt) {
+  document.getElementById('cap-in').value = prompt;
+  go('zapisnik');
+  await capture();
 }
 
-async function weeklyReflection(){
-  const recent=S.entries.slice(-20).map(e=>`[${e.ctx}] ${e.text}`).join('\n');
-  const prompt=`UdÄ›lej tĂ˝dennĂ­ reflexi Petra na zĂˇkladÄ› zĂˇpiskĹŻ:\n${recent}\n\nShrĹ: 1) co se povedlo 2) co se opakuje jako vzorec 3) co potĹ™ebuje pozornost pĹ™Ă­ĹˇtĂ­ tĂ˝den. ÄŚesky, konkrĂ©tnÄ›, max 8 vÄ›t.`;
-  document.getElementById('cap-input').value=prompt;
-  await captureNote();
-  showPage('zapisnik');
+async function reflexe() {
+  const recent = S.entries.slice(-20).map(e=>`[${e.ctx}] ${e.text}`).join('\n');
+  const p = `Udělej týdenní reflexi na základě těchto zápisků:\n${recent}\n\nShrň: 1) co se povedlo 2) co se opakuje jako vzorec 3) co potřebuje pozornost příští týden. Česky, konkrétně, max 8 vět.`;
+  document.getElementById('cap-in').value = p;
+  go('zapisnik');
+  await capture();
 }
 
-function buildPrompt(ctx){
-  return `Jsi osobnĂ­ asistent Petra â€” Ĺ™emeslnĂ­ka, lektora DDM (87 dÄ›tĂ­), spolupracovnĂ­ka BESIP, technika divadla KIVADLO. Petr (186 cm, hubne z 196 na 176 kg) praktikuje 16/8 laÄŤnÄ›nĂ­, mĂˇ dceru 10 let a syny 17 a 21 let. RozvĂ­jĂ­ pedagogickou metodiku s 20+ lety praxe a plĂˇnuje postavit dĹŻm.
-ZĂˇpisek je z kontextu: "${ctx}".
-OdpovÄ›z ÄŤesky, struÄŤnÄ› (3â€“4 vÄ›ty), konkrĂ©tnÄ›. Navrhni 1 akci nebo pozorovĂˇnĂ­. Pokud zĂˇpisek mĹŻĹľe obohatit metodiku nebo jinĂ˝ kontext, zmĂ­Ĺ to. Ĺ˝ĂˇdnĂ© omĂˇÄŤky.`;
+function sysPrompt(ctx) {
+  return `Jsi osobní asistent Petra — řemeslníka (carpentry, locksmithing, masonry, flooring), lektora DDM ve Světlé nad Sázavou (87 dětí, kroužky pohybu), spolupracovníka BESIP (bezpečnost na silnicích pro 4. třídy), technika divadla KIVADLO (Denon, Strand 200). Petr (186 cm, hubne z 196 na 176 kg, 16/8 lačnění, silový trénink 4x týdně) má dceru 10 let a syny 17 a 21 let. Rozvíjí pedagogickou metodiku s 20+ lety praxe a plánuje postavit dům. Zápisek je z kontextu: "${ctx}".
+Odpověz česky, stručně (3–4 věty), konkrétně. Navrhni 1 akci nebo pozorování. Pokud zápisek může obohatit metodiku nebo jiný kontext, zmíň to. Žádné omáčky ani přivítání.`;
 }
 
-function quickNote(ctx,prefix){S.ctx=ctx;document.getElementById('cap-input').value=prefix;document.getElementById('cap-input').focus();}
-
-function toggleVoice(){
-  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){alert('Zkus Chrome.');return;}
-  if(S.recording){S.recog&&S.recog.stop();return;}
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const r=new SR(); r.lang='cs-CZ'; r.continuous=false; r.interimResults=false;
-  r.onresult=e=>{document.getElementById('cap-input').value=e.results[0][0].transcript;};
-  r.onend=()=>{S.recording=false;document.getElementById('voiceBtn').classList.remove('rec');};
-  r.start(); S.recog=r; S.recording=true;
-  document.getElementById('voiceBtn').classList.add('rec');
+function quickNote(ctx, prefix) {
+  S.ctx = ctx;
+  document.getElementById('cap-in').value = prefix;
+  document.getElementById('cap-in').focus();
 }
 
-function nowStr(){return new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});}
+// ═══ VOICE ═══
+function voice() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Hlasový vstup nefunguje v tomto prohlížeči. Zkus Chrome.'); return;
+  }
+  if (S.rec) { S.recog && S.recog.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const r = new SR(); r.lang='cs-CZ'; r.continuous=false; r.interimResults=false;
+  r.onresult = e => { document.getElementById('cap-in').value = e.results[0][0].transcript; };
+  r.onend = () => { S.rec=false; document.getElementById('vbtn').classList.remove('rec'); };
+  r.start(); S.recog=r; S.rec=true;
+  document.getElementById('vbtn').classList.add('rec');
+}
 
-document.getElementById('cap-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();captureNote();}});
+// ═══ HELPERS ═══
+function ts() { return new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}); }
 
-showPage('zapisnik');
-window.addEventListener('load',()=>{setTimeout(()=>{if(G.clientId) initGoogle();},600);});
-if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+document.getElementById('cap-in').addEventListener('keydown', e => {
+  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); capture(); }
+});
+
+// ═══ INIT ═══
+go('zapisnik');
+window.addEventListener('load', () => { setTimeout(()=>{ if(G.cid) gInit(); }, 700); });
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
