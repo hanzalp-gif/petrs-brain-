@@ -517,7 +517,7 @@ function gInit() {
   try {
     G.client = google.accounts.oauth2.initTokenClient({
       client_id: G.cid,
-      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.readonly',
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar',
       callback: (r) => {
         if (r.error) { sb('err'); return; }
         G.tok = r.access_token;
@@ -530,25 +530,150 @@ function gInit() {
   } catch(e) { console.warn(e); }
 }
 
-async function calSync() {
+async function calSync(weeksAhead) {
   if (!G.tok) return;
+  const weeks = weeksAhead || S.calRange || 4;
+  S.calRange = weeks;
   const n = new Date(); n.setHours(0,0,0,0);
-  const mx = new Date(); mx.setDate(n.getDate() + 7);
+  const mx = new Date(); mx.setDate(n.getDate() + weeks * 7);
   try {
     const lr = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {headers:{Authorization:`Bearer ${G.tok}`}});
     const ld = await lr.json();
+    // Store primary calendar id for writes
+    const primary = (ld.items||[]).find(c=>c.primary);
+    if (primary) G.primaryCal = primary.id;
     let all = [];
     for (const cal of (ld.items||[])) {
       try {
         const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?timeMin=${n.toISOString()}&timeMax=${mx.toISOString()}&singleEvents=true&orderBy=startTime`,{headers:{Authorization:`Bearer ${G.tok}`}});
         const d = await r.json();
-        if (d.items) all = all.concat(d.items.map(e => ({...e, cc: cal.backgroundColor||'#5888b8'})));
+        if (d.items) all = all.concat(d.items.map(e => ({...e, cc: cal.backgroundColor||'#5888b8', calId: cal.id})));
       } catch(e) {}
     }
     S.calEvs = Array.from(new Map(all.map(e => [e.id,e])).values())
       .sort((a,b) => new Date(a.start.dateTime||a.start.date) - new Date(b.start.dateTime||b.start.date));
     if (S.page==='tyden') rTyden();
   } catch(e) { console.warn(e); }
+}
+
+// ─── CREATE CALENDAR EVENT ───
+async function createCalEvent(parsed) {
+  if (!G.tok) { alert('Nejprve propoj Google kalendář v Nastavení.'); return null; }
+  const calId = G.primaryCal || 'primary';
+  const body = {
+    summary: parsed.title,
+    start: parsed.allDay ? {date: parsed.date} : {dateTime: parsed.start, timeZone: 'Europe/Prague'},
+    end:   parsed.allDay ? {date: parsed.date} : {dateTime: parsed.end,   timeZone: 'Europe/Prague'},
+    description: parsed.desc || ''
+  };
+  try {
+    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`, {
+      method: 'POST',
+      headers: {Authorization:`Bearer ${G.tok}`, 'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const ev = await r.json();
+    if (ev.id) {
+      await calSync(S.calRange || 4);
+      return ev;
+    }
+    return null;
+  } catch(e) { console.warn(e); return null; }
+}
+
+// ─── DELETE CALENDAR EVENT ───
+async function deleteCalEvent(eventId, calId) {
+  if (!G.tok) return;
+  try {
+    await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId||G.primaryCal||'primary')}/events/${eventId}`, {
+      method: 'DELETE',
+      headers: {Authorization:`Bearer ${G.tok}`}
+    });
+    S.calEvs = S.calEvs.filter(e=>e.id!==eventId);
+    if (S.page==='tyden') rTyden();
+  } catch(e) {}
+}
+
+// ─── PARSE NATURAL LANGUAGE EVENT ───
+async function parseEventText(text) {
+  // Use Claude to parse the natural language
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const todayDay = new Date().toLocaleDateString('cs-CZ',{weekday:'long'});
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:300,
+        system:`Jsi parser kalendářních událostí. Dnešní datum: ${today} (${todayDay}). Parsuj text a vrať POUZE JSON objekt bez jakéhokoliv dalšího textu:\n{"title":"název události","date":"YYYY-MM-DD","start":"YYYY-MM-DDTHH:MM:00","end":"YYYY-MM-DDTHH:MM:00","allDay":false,"desc":""}\nPokud není čas uveden, nastav allDay:true. Pokud není délka, přidej 1 hodinu. Relativní výrazy (pondělí, příští týden, zítra) přepočítej na absolutní datum od dnešního dne ${today}.`,
+        messages:[{role:'user', content:text}]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.find(b=>b.type==='text')?.text || '';
+    const clean = raw.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  } catch(e) { return null; }
+}
+
+// ─── CHECK CONFLICTS ───
+function checkConflicts(parsed) {
+  if (parsed.allDay) return [];
+  const newStart = new Date(parsed.start);
+  const newEnd   = new Date(parsed.end);
+  return S.calEvs.filter(e => {
+    if (!e.start.dateTime) return false;
+    const eStart = new Date(e.start.dateTime);
+    const eEnd   = new Date(e.end?.dateTime || e.start.dateTime);
+    return newStart < eEnd && newEnd > eStart;
+  });
+}
+
+// ─── ADD EVENT FLOW (called from capture bar) ───
+async function addEventFlow(text) {
+  // Show parsing indicator
+  const entry = {id:Date.now(), ctx:'Kalendář', text, time:ts(), ai:null, loading:true};
+  S.entries.push(entry); saveL();
+  go('zapisnik');
+  renderEnt();
+
+  const parsed = await parseEventText(text);
+  if (!parsed || !parsed.date) {
+    entry.ai = 'Nepodařilo se rozpoznat datum nebo čas. Zkus přesněji, např. "pondělí 24.3. schůzka ve 14:00".';
+    entry.loading = false;
+    saveL(); renderEnt(); return;
+  }
+
+  const conflicts = checkConflicts(parsed);
+  const conflictTxt = conflicts.length
+    ? `⚠️ Konflikt s: ${conflicts.map(e=>e.summary).join(', ')}. `
+    : '✓ Termín je volný. ';
+
+  // Show confirmation with option to add
+  entry.ai = `${conflictTxt}Rozpoznáno: **${parsed.title}** — ${parsed.allDay ? parsed.date : new Date(parsed.start).toLocaleString('cs-CZ',{weekday:'short',day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'})}`;
+  entry.loading = false;
+  entry.pendingEvent = parsed;
+  entry.hasConflict = conflicts.length > 0;
+  saveL(); renderEnt();
+}
+
+// ─── CONFIRM ADD TO CALENDAR ───
+async function confirmAddEvent(entryId) {
+  const entry = S.entries.find(e=>e.id===entryId);
+  if (!entry?.pendingEvent) return;
+  const btn = document.querySelector(`[data-confirm="${entryId}"]`);
+  if (btn) { btn.textContent='Přidávám...'; btn.disabled=true; }
+  const ev = await createCalEvent(entry.pendingEvent);
+  if (ev) {
+    entry.ai = `✓ Přidáno do kalendáře: **${entry.pendingEvent.title}**`;
+    entry.pendingEvent = null;
+    if (S.page==='tyden') rTyden();
+  } else {
+    entry.ai = 'Nepodařilo se přidat do kalendáře. Zkontroluj oprávnění v Nastavení.';
+    entry.pendingEvent = null;
+  }
+  saveL(); renderEnt();
 }
 
 // ═══ DRIVE ═══
@@ -657,90 +782,216 @@ function renderEnt() {
   if (!list || !S.entries.length) return;
   list.innerHTML = S.entries.slice().reverse().map(e => {
     const cfg = CTX[e.ctx] || CTX['DDM / kroužky'];
+    const crossHtml = e.crossMod ? `
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 10px;background:color-mix(in srgb,var(--gold) 8%,transparent);border-radius:var(--rs);border:1px dashed color-mix(in srgb,var(--gold) 30%,transparent)">
+        <span style="font-size:9px;color:var(--gold);font-weight:500;text-transform:uppercase;letter-spacing:.06em">Patří také do</span>
+        <span style="font-size:11px;color:var(--text2);flex:1">${e.crossMod}</span>
+        <button onclick="addCross(${e.id},'${e.crossMod.split('—')[0].trim()}')" style="background:var(--gold);color:var(--bg);border:none;border-radius:5px;padding:2px 8px;font-size:9px;font-weight:500;cursor:pointer;font-family:var(--sans)">Přidat</button>
+      </div>` : '';
+    const pendingHtml = e.pendingEvent ? `
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 11px;background:color-mix(in srgb,var(--blue) 8%,transparent);border-radius:var(--rs);border:1px solid color-mix(in srgb,var(--blue) 25%,transparent)">
+        <span style="font-size:11px;color:var(--text2);flex:1">${e.hasConflict ? '⚠️ Přesto přidat?' : 'Přidat do Google Kalendáře?'}</span>
+        <button data-confirm="${e.id}" onclick="confirmAddEvent(${e.id})" style="background:var(--blue);color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--sans)">Přidat ✓</button>
+        <button onclick="cancelPending(${e.id})" style="background:transparent;color:var(--text3);border:1px solid var(--line2);border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;font-family:var(--sans)">Zrušit</button>
+      </div>` : '';
+    const aiTxt = e.ai ? e.ai.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>') : '';
     return `<div class="ecard">
       <div class="emeta"><span class="etag ${cfg.cls}">${e.ctx}</span><span class="etime">${e.time}</span></div>
       <div class="etext">${e.text.replace(/\n/g,'<br>')}</div>
       ${e.loading
         ? `<div class="ai-blk"><div class="ai-lbl">Asistent</div><span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`
-        : e.ai ? `<div class="ai-blk"><div class="ai-lbl">Asistent</div>${e.ai.replace(/\n/g,'<br>')}</div>` : ''}
+        : aiTxt ? `<div class="ai-blk"><div class="ai-lbl">Asistent</div>${aiTxt}</div>` : ''}
+      ${pendingHtml}
+      ${crossHtml}
     </div>`;
   }).join('');
 }
 
-// ═══ TÝDEN ═══
+function cancelPending(id) {
+  const e = S.entries.find(e=>e.id===id);
+  if (e) { e.pendingEvent=null; e.hasConflict=false; }
+  saveL(); renderEnt();
+}
+
+function addCross(id, targetCtx) {
+  const orig = S.entries.find(e=>e.id===id);
+  if (!orig) return;
+  const ctxKey = Object.keys(CTX).find(k => k.toLowerCase().includes(targetCtx.toLowerCase())) || targetCtx;
+  const copy = {id:Date.now(), ctx:ctxKey, text:orig.text, time:orig.time+' (přidáno)', ai:null, loading:false};
+  S.entries.push(copy);
+  orig.crossMod = null;
+  saveL(); renderEnt();
+}
+
+// ═══ KALENDÁŘ — view state ═══
+const CAL = {mode:'week', offset:0};
+
 function rTyden() {
   const el = document.getElementById('pc');
-  const today = new Date();
-  const dow = today.getDay();
-  const mon = new Date(today); mon.setDate(today.getDate() - (dow===0?6:dow-1));
-  const days = ['Po','Út','St','Čt','Pá','So','Ne'];
-
-  let wh = '<div class="wcal"><div class="wgrid">';
-  for (let i=0;i<7;i++) {
-    const d = new Date(mon); d.setDate(mon.getDate()+i);
-    const isT = d.toDateString()===today.toDateString();
-    const evs = S.calEvs.filter(e => new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
-    wh += `<div class="dcol${isT?' today':''}">
-      <div class="dname">${days[i]}</div>
-      <div class="dnum">${d.getDate()}</div>
-      ${evs.map(e=>`<div class="dev" style="background:color-mix(in srgb,${e.cc} 22%,transparent);color:${e.cc}">
-        ${e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':''} ${(e.summary||'').slice(0,20)}
-      </div>`).join('')}
-      ${!evs.length ? `<div class="dfree">volno</div>` : ''}
-    </div>`;
-  }
-  wh += '</div></div>';
-
   const fw = freeWindows();
+
+  const viewBtns = `<div style="display:flex;gap:6px;margin-bottom:14px;align-items:center">
+    ${['week','month','list'].map((m,i)=>{
+      const lbl = ['Týden','Měsíc','Seznam'][i];
+      const act = CAL.mode===m;
+      return `<button onclick="setCalMode('${m}')" style="padding:5px 12px;border-radius:20px;font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--line2);transition:all .15s;${act?'background:var(--gold);color:var(--bg);border-color:transparent':'background:transparent;color:var(--text3)'}">${lbl}</button>`;
+    }).join('')}
+    <div style="flex:1"></div>
+    <button onclick="navCal(-1)" style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:4px 10px;color:var(--text2);font-family:var(--sans);font-size:14px;cursor:pointer;line-height:1">‹</button>
+    <button onclick="navCal(1)"  style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:4px 10px;color:var(--text2);font-family:var(--sans);font-size:14px;cursor:pointer;line-height:1">›</button>
+    <button onclick="navCal(0)"  style="background:transparent;border:1px solid var(--line2);border-radius:6px;padding:4px 9px;color:var(--text3);font-family:var(--sans);font-size:10px;cursor:pointer">Dnes</button>
+  </div>`;
+
+  let calHtml = '';
+  if (CAL.mode==='week')  calHtml = buildWeekView();
+  if (CAL.mode==='month') calHtml = buildMonthView();
+  if (CAL.mode==='list')  calHtml = buildListView();
+
   el.innerHTML = `
-    <button class="cal-sync" onclick="${G.tok?'calSync()':'openSett()'}">
+    <button class="cal-sync" onclick="${G.tok?'calSync(4)':'openSett()'}">
       <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M7 2v3M13 2v3M3 9h14"/></svg>
       ${G.tok ? 'Aktualizovat kalendář' : 'Připojit Google Kalendář →'}
     </button>
-    <div class="sec">Tento týden</div>
-    ${wh}
+    <div style="background:color-mix(in srgb,var(--green) 8%,transparent);border:1px solid color-mix(in srgb,var(--green) 22%,transparent);border-radius:var(--rs);padding:9px 13px;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+      <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+      <input id="cal-add-in" type="text" placeholder='"pondělí schůzka s BESIP koordinátorkou ve 14:00"' style="flex:1;background:transparent;border:none;font-family:var(--sans);font-size:12px;color:var(--text);outline:none" onkeydown="if(event.key==='Enter')calAddFromText()">
+      <button onclick="calAddFromText()" style="background:var(--green);color:var(--bg);border:none;border-radius:5px;padding:4px 11px;font-size:10px;font-weight:500;cursor:pointer;font-family:var(--sans);white-space:nowrap">Přidat</button>
+    </div>
+    ${viewBtns}
+    ${calHtml}
     <div class="sec">Volná okna</div>
-    ${fw.map(w=>`<div class="fwin">
-      <div class="fwin-dot"></div>
-      <div style="flex:1"><div class="fwin-t">${w.lbl}</div><div class="fwin-s">${w.desc}</div></div>
-      <span class="fwin-tag">${w.dur}</span>
-    </div>`).join('')}
-    ${!fw.length ? '<div style="font-size:11px;color:var(--text3);text-align:center;padding:14px">Propoj kalendář pro zobrazení volných oken</div>' : ''}
-    <div class="sec" style="margin-top:20px">Naplánovat</div>
+    ${fw.map(w=>`<div class="fwin"><div class="fwin-dot"></div><div style="flex:1"><div class="fwin-t">${w.lbl}</div><div class="fwin-s">${w.desc}</div></div><span class="fwin-tag">${w.dur}</span></div>`).join('')}
+    ${!fw.length?'<div style="font-size:11px;color:var(--text3);text-align:center;padding:14px">Propoj kalendář pro zobrazení volných oken</div>':''}
+    <div class="sec" style="margin-top:20px">Rychlé plánování</div>
     <div class="plan-grid">
-      ${['Zakázka','Výlet s dcerou','Schůzka','Práce na domě','Osobní čas','Jiné'].map(t=>`
-        <button class="abt" onclick="planIt('${t}')">${t}<span class="abt-arr">→</span></button>`).join('')}
+      ${['Zakázka','Výlet s dcerou','Schůzka','Práce na domě','Osobní čas','Jiné'].map(t=>`<button class="abt" onclick="planIt('${t}')">${t}<span class="abt-arr">→</span></button>`).join('')}
     </div>`;
 }
 
+function setCalMode(m) { CAL.mode=m; CAL.offset=0; rTyden(); }
+function navCal(dir) { if(dir===0) CAL.offset=0; else CAL.offset+=dir; rTyden(); }
+
+function buildWeekView() {
+  const today=new Date();
+  const dow=today.getDay();
+  const mon=new Date(today); mon.setDate(today.getDate()-(dow===0?6:dow-1)+CAL.offset*7);
+  const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+  const days=['Po','Út','St','Čt','Pá','So','Ne'];
+  const rng=`${mon.toLocaleDateString('cs-CZ',{day:'numeric',month:'short'})} — ${sun.toLocaleDateString('cs-CZ',{day:'numeric',month:'short',year:'numeric'})}`;
+  let h=`<div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">${rng}</div>`;
+  h+='<div class="wcal"><div class="wgrid">';
+  for(let i=0;i<7;i++){
+    const d=new Date(mon); d.setDate(mon.getDate()+i);
+    const isT=d.toDateString()===today.toDateString();
+    const evs=S.calEvs.filter(e=>new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
+    h+=`<div class="dcol${isT?' today':''}">
+      <div class="dname">${days[i]}</div>
+      <div class="dnum">${d.getDate()}</div>
+      ${evs.map(e=>`<div class="dev" title="${e.summary||''}" style="background:color-mix(in srgb,${e.cc} 22%,transparent);color:${e.cc};cursor:pointer" onclick="showEvDetail('${e.id}')">
+        ${e.start.dateTime?new Date(e.start.dateTime).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' ':''} ${(e.summary||'').slice(0,16)}
+      </div>`).join('')}
+      ${!evs.length?`<div class="dfree">volno</div>`:''}
+    </div>`;
+  }
+  return h+'</div></div>';
+}
+
+function buildMonthView() {
+  const today=new Date();
+  const base=new Date(today.getFullYear(), today.getMonth()+CAL.offset, 1);
+  const year=base.getFullYear(); const month=base.getMonth();
+  const lastDay=new Date(year,month+1,0);
+  const startDow=(new Date(year,month,1).getDay()+6)%7;
+  const mName=base.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'});
+  const days=['Po','Út','St','Čt','Pá','So','Ne'];
+  let h=`<div style="font-size:12px;color:var(--text2);text-align:center;font-weight:500;margin-bottom:8px">${mName}</div>`;
+  h+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px">`;
+  days.forEach(d=>{h+=`<div style="font-size:8px;text-align:center;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.04em;padding:2px 0">${d}</div>`;});
+  h+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
+  for(let i=0;i<startDow;i++) h+='<div></div>';
+  for(let day=1;day<=lastDay.getDate();day++){
+    const d=new Date(year,month,day);
+    const isT=d.toDateString()===today.toDateString();
+    const evs=S.calEvs.filter(e=>new Date(e.start.dateTime||e.start.date).toDateString()===d.toDateString());
+    h+=`<div style="background:${isT?'color-mix(in srgb,var(--gold) 15%,var(--bg3))':'var(--bg3)'};border:1px solid ${isT?'color-mix(in srgb,var(--gold) 35%,transparent)':'transparent'};border-radius:5px;padding:3px;min-height:46px;cursor:pointer" onclick="dayClick('${d.toISOString().slice(0,10)}')">
+      <div style="font-size:9px;text-align:center;color:${isT?'var(--gold)':'var(--text2)'};font-weight:${isT?'500':'300'};margin-bottom:2px">${day}</div>
+      ${evs.slice(0,2).map(e=>`<div style="font-size:7px;padding:1px 3px;border-radius:2px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:color-mix(in srgb,${e.cc} 22%,transparent);color:${e.cc}">${(e.summary||'').slice(0,10)}</div>`).join('')}
+      ${evs.length>2?`<div style="font-size:7px;color:var(--text3);text-align:center">+${evs.length-2}</div>`:''}
+    </div>`;
+  }
+  return h+'</div>';
+}
+
+function buildListView() {
+  const today=new Date(); today.setHours(0,0,0,0);
+  const from=new Date(today); from.setDate(today.getDate()+CAL.offset*14);
+  const to=new Date(from); to.setDate(from.getDate()+28);
+  const upcoming=S.calEvs.filter(e=>{const d=new Date(e.start.dateTime||e.start.date);return d>=from&&d<=to;});
+  if(!upcoming.length) return '<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px">Žádné události v tomto období</div>';
+  const byDate={};
+  upcoming.forEach(e=>{const dk=new Date(e.start.dateTime||e.start.date).toDateString();if(!byDate[dk])byDate[dk]=[];byDate[dk].push(e);});
+  return Object.entries(byDate).map(([dk,evs])=>{
+    const d=new Date(dk); const isT=d.toDateString()===new Date().toDateString();
+    const ds=d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long'});
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:500;color:${isT?'var(--gold)':'var(--text3)'};text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">${ds}${isT?' · dnes':''}</div>
+      ${evs.map(e=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 12px;background:var(--bg3);border-radius:var(--rs);margin-bottom:5px;border-left:2px solid ${e.cc}">
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--text);font-weight:500">${e.summary||'Bez názvu'}</div>
+          ${e.start.dateTime?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${new Date(e.start.dateTime).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'})}${e.end?.dateTime?' – '+new Date(e.end.dateTime).toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'}):''}${e.location?' · '+e.location:''}</div>`:'<div style="font-size:10px;color:var(--text3);margin-top:2px">Celý den</div>'}
+        </div>
+        <button onclick="deleteCalEvent('${e.id}','${e.calId||''}')" style="background:transparent;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px;line-height:1" title="Smazat">×</button>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
 function freeWindows() {
-  const today = new Date();
-  const out = [];
-  for (let i=0;i<7;i++) {
-    const d = new Date(today); d.setDate(today.getDate()+i);
-    const evs = S.calEvs.filter(e => {
-      const ed = new Date(e.start.dateTime||e.start.date);
-      return ed.toDateString()===d.toDateString() && e.start.dateTime;
-    });
-    const dn = d.toLocaleDateString('cs-CZ',{weekday:'long'});
-    const df = d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'});
-    if (!evs.length) {
-      out.push({lbl:`${dn} ${df} — celý den`, desc:'Žádné události — ideální pro zakázku nebo výlet', dur:'celý den'});
-    } else {
-      const starts = evs.map(e=>new Date(e.start.dateTime).getHours());
-      const ends = evs.map(e=>new Date(e.end?.dateTime||e.start.dateTime).getHours());
-      const earl = Math.min(...starts); const late = Math.max(...ends);
-      if (earl > 9) out.push({lbl:`${dn} ráno do ${earl}:00`, desc:'Volné okno před prvním blokem', dur:`${earl-7}h`});
-      if (late < 17) out.push({lbl:`${dn} od ${late}:00`, desc:'Volný blok odpoledne', dur:`${17-late}+ hod`});
+  const today=new Date(); const out=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(today); d.setDate(today.getDate()+i);
+    const evs=S.calEvs.filter(e=>{const ed=new Date(e.start.dateTime||e.start.date);return ed.toDateString()===d.toDateString()&&e.start.dateTime;});
+    const dn=d.toLocaleDateString('cs-CZ',{weekday:'long'});
+    const df=d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'});
+    if(!evs.length){out.push({lbl:`${dn} ${df} — celý den`,desc:'Žádné události — ideální pro zakázku nebo výlet',dur:'celý den'});}
+    else{
+      const starts=evs.map(e=>new Date(e.start.dateTime).getHours());
+      const ends=evs.map(e=>new Date(e.end?.dateTime||e.start.dateTime).getHours());
+      const earl=Math.min(...starts); const late=Math.max(...ends);
+      if(earl>9) out.push({lbl:`${dn} ráno do ${earl}:00`,desc:'Volné okno před prvním blokem',dur:`${earl-7}h`});
+      if(late<17) out.push({lbl:`${dn} od ${late}:00`,desc:'Volný blok odpoledne',dur:`${17-late}+ hod`});
     }
-    if (out.length >= 5) break;
+    if(out.length>=5) break;
   }
   return out.slice(0,5);
 }
 
 function planIt(t) {
-  document.getElementById('cap-in').value = `Naplánovat: ${t} — `;
-  document.getElementById('cap-in').focus();
+  const inp=document.getElementById('cal-add-in');
+  if(inp){inp.value=t+' — ';inp.focus();}
+  else{document.getElementById('cap-in').value=`Naplánovat: ${t} — `;document.getElementById('cap-in').focus();}
+}
+
+function dayClick(dateStr) {
+  const d=new Date(dateStr);
+  const fmt=d.toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'numeric'});
+  const inp=document.getElementById('cal-add-in');
+  if(inp){inp.value=fmt+' ';inp.focus();}
+}
+
+function showEvDetail(eventId) {
+  const e=S.calEvs.find(ev=>ev.id===eventId);
+  if(!e) return;
+  const ts=e.start.dateTime?new Date(e.start.dateTime).toLocaleString('cs-CZ',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}):new Date(e.start.date).toLocaleDateString('cs-CZ',{weekday:'long',day:'numeric',month:'long'});
+  if(confirm(`${e.summary||'Bez názvu'}\n${ts}\n\nSmazat tuto událost?`)) deleteCalEvent(e.id,e.calId||'');
+}
+
+async function calAddFromText() {
+  const inp=document.getElementById('cal-add-in');
+  const txt=inp?.value.trim();
+  if(!txt) return;
+  inp.value='';
+  await addEventFlow(txt);
 }
 
 // ═══ PROJEKTY ═══
@@ -909,7 +1160,18 @@ async function capture() {
   const btn = document.getElementById('sbtn');
   btn.disabled = true; inp.value = '';
 
-  const entry = {id:Date.now(), ctx:S.ctx, text, time:ts(), ai:null, loading:true};
+  // Detect scheduling intent
+  const schedWords = ['naplánovat','naplánuj','přidat do kalendáře','zaplánovat','schůzka','setkání','kroužek','besip','ve '];
+  const isSchedule = schedWords.some(w => text.toLowerCase().includes(w)) &&
+    /\d{1,2}[:.h]\d{0,2}|pondělí|úterý|středa|čtvrtek|pátek|sobota|neděle|zítra|příští|dnes/i.test(text);
+
+  if (isSchedule) {
+    btn.disabled = false;
+    await addEventFlow(text);
+    return;
+  }
+
+  const entry = {id:Date.now(), ctx:S.ctx, text, time:ts(), ai:null, loading:true, crossMod:null};
   S.entries.push(entry); saveL();
   if (S.page==='zapisnik') renderEnt();
 
@@ -919,22 +1181,43 @@ async function capture() {
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         model:'claude-sonnet-4-20250514',
-        max_tokens:800,
+        max_tokens:1000,
         system: sysPrompt(entry.ctx),
-        messages:[{role:'user',content:text}]
+        messages:[{role:'user', content: buildMsg(text, entry.ctx)}]
       })
     });
     const data = await resp.json();
-    entry.ai = data.content?.find(b=>b.type==='text')?.text || '';
+    const raw = data.content?.find(b=>b.type==='text')?.text || '';
+
+    // Parse cross-module suggestion if present
+    const crossMatch = raw.match(/\[CROSS:([^\]]+)\]/);
+    if (crossMatch) {
+      entry.crossMod = crossMatch[1].trim();
+      entry.ai = raw.replace(/\[CROSS:[^\]]+\]/, '').trim();
+    } else {
+      entry.ai = raw;
+    }
     entry.loading = false;
   } catch(e) {
-    entry.ai = 'Chyba připojení.';
+    entry.ai = 'Chyba připojení — zápisek uložen lokálně.';
     entry.loading = false;
   }
 
   saveL();
   if (S.page==='zapisnik') renderEnt();
   btn.disabled = false;
+}
+
+// Build message with full context for AI
+function buildMsg(text, ctx) {
+  // Last 12 entries as context
+  const recent = S.entries.slice(-12).map(e => `[${e.ctx} · ${e.time}] ${e.text}`).join('\n');
+  // Active projects summary
+  const projSummary = 'Podlaha 60%, Dům 15%, KIVADLO 80%, Metodika PDF 25%, Van plánováno';
+  // This week's cal events
+  const calSum = S.calEvs.slice(0,5).map(e=>`${e.summary||''}`).join(', ') || 'žádné události';
+
+  return `KONTEXT POSLEDNÍCH ZÁPISKŮ:\n${recent}\n\nAKTIVNÍ PROJEKTY: ${projSummary}\nKALENDÁŘ TENTO TÝDEN: ${calSum}\n\nNOVÝ ZÁPISEK [${ctx}]:\n${text}`;
 }
 
 async function askAI(prompt) {
@@ -944,16 +1227,27 @@ async function askAI(prompt) {
 }
 
 async function reflexe() {
-  const recent = S.entries.slice(-20).map(e=>`[${e.ctx}] ${e.text}`).join('\n');
-  const p = `Udělej týdenní reflexi na základě těchto zápisků:\n${recent}\n\nShrň: 1) co se povedlo 2) co se opakuje jako vzorec 3) co potřebuje pozornost příští týden. Česky, konkrétně, max 8 vět.`;
+  const recent = S.entries.slice(-25).map(e=>`[${e.ctx} · ${e.time}] ${e.text}`).join('\n');
+  const moods = S.entries.filter(e=>e.ctx==='Osobní'&&e.text.startsWith('Nálada')).slice(-7).map(e=>e.text).join(', ');
+  const p = `Udělej týdenní reflexi Petra. Zápisky:\n${recent}\n\nNálady tento týden: ${moods||'nezaznamenáno'}\n\nShrň: 1) co se povedlo 2) co se opakuje jako vzorec přes více kontextů 3) co potřebuje pozornost příští týden 4) jeden konkrétní doporučený krok. Česky, osobně, max 10 vět.`;
   document.getElementById('cap-in').value = p;
   go('zapisnik');
   await capture();
 }
 
 function sysPrompt(ctx) {
-  return `Jsi osobní asistent Petra — řemeslníka (carpentry, locksmithing, masonry, flooring), lektora DDM ve Světlé nad Sázavou (87 dětí, kroužky pohybu), spolupracovníka BESIP (bezpečnost na silnicích pro 4. třídy), technika divadla KIVADLO (Denon, Strand 200). Petr (186 cm, hubne z 196 na 176 kg, 16/8 lačnění, silový trénink 4x týdně) má dceru 10 let a syny 17 a 21 let. Rozvíjí pedagogickou metodiku s 20+ lety praxe a plánuje postavit dům. Zápisek je z kontextu: "${ctx}".
-Odpověz česky, stručně (3–4 věty), konkrétně. Navrhni 1 akci nebo pozorování. Pokud zápisek může obohatit metodiku nebo jiný kontext, zmíň to. Žádné omáčky ani přivítání.`;
+  const lw = S.osobni.w.slice(-1)[0];
+  const cw = lw ? lw.v : 186;
+  return `Jsi osobní asistent Petra — řemeslníka (tesařství, zámečnictví, zdění, podlahy), lektora DDM ve Světlé nad Sázavou (87 dětí, kroužky pohybu), spolupracovníka BESIP (bezpečnost silnic pro 4. třídy), technika divadla KIVADLO. Petr (186 cm, ${cw} kg, hubne z 196 na 176 kg, 16/8 lačnění, silový trénink 4x týdně) má dceru 10 let a syny 17 a 21 let. Rozvíjí pedagogickou metodiku s 20+ lety praxe. Plánuje postavit dům ve Světlé nad Sázavou.
+
+Aktuální kontext zápisku: "${ctx}".
+
+PRAVIDLA ODPOVĚDI:
+- Odpovídej česky, stručně (3–5 vět), konkrétně a osobně
+- Navrhni 1 konkrétní akci nebo pozorování
+- Vidíš historii zápisků — všimni si vzorců a propojení přes různé kontexty
+- Pokud zápisek JASNĚ patří i do jiného modulu (metodika, rodina, osobní), přidej na konec: [CROSS: název modulu — důvod proč]
+- Žádné omáčky, žádné přivítání, žádné "samozřejmě"`;
 }
 
 function quickNote(ctx, prefix) {
@@ -962,18 +1256,60 @@ function quickNote(ctx, prefix) {
   document.getElementById('cap-in').focus();
 }
 
-// ═══ VOICE ═══
+// ═══ VOICE — auto-submit after recognition ═══
 function voice() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     alert('Hlasový vstup nefunguje v tomto prohlížeči. Zkus Chrome.'); return;
   }
   if (S.rec) { S.recog && S.recog.stop(); return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const r = new SR(); r.lang='cs-CZ'; r.continuous=false; r.interimResults=false;
-  r.onresult = e => { document.getElementById('cap-in').value = e.results[0][0].transcript; };
-  r.onend = () => { S.rec=false; document.getElementById('vbtn').classList.remove('rec'); };
+  const r = new SR(); r.lang='cs-CZ'; r.continuous=false; r.interimResults=true;
+  const vbtn = document.getElementById('vbtn');
+  const inp = document.getElementById('cap-in');
+
+  r.onresult = e => {
+    const transcript = Array.from(e.results).map(r=>r[0].transcript).join('');
+    inp.value = transcript;
+    // Auto-submit on final result
+    if (e.results[e.results.length-1].isFinal) {
+      setTimeout(() => capture(), 600);
+    }
+  };
+  r.onerror = () => { S.rec=false; vbtn.classList.remove('rec'); };
+  r.onend = () => { S.rec=false; vbtn.classList.remove('rec'); };
   r.start(); S.recog=r; S.rec=true;
-  document.getElementById('vbtn').classList.add('rec');
+  vbtn.classList.add('rec');
+}
+
+// ═══ CROSS-MODULE SUGGESTIONS ═══
+// Rendered inline in entry cards — see renderEnt()
+
+// ═══ WEEKLY NOTIFICATION (PWA) ═══
+function scheduleNotification() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then(p => {
+      if (p === 'granted') scheduleNotification();
+    });
+    return;
+  }
+  if (Notification.permission !== 'granted') return;
+
+  // Schedule Sunday 20:00
+  const now = new Date();
+  const nextSun = new Date();
+  nextSun.setDate(now.getDate() + ((7 - now.getDay()) % 7 || 7));
+  nextSun.setHours(20, 0, 0, 0);
+  const msUntil = nextSun - now;
+
+  setTimeout(() => {
+    new Notification("Petr's Brain — Týdenní reflexe", {
+      body: "Jak byl týden? Otevři aplikaci a udělej reflexi.",
+      icon: '/icon-192.png',
+      tag: 'weekly-reflection'
+    });
+    scheduleNotification(); // reschedule for next week
+  }, msUntil);
 }
 
 // ═══ HELPERS ═══
@@ -985,7 +1321,11 @@ document.getElementById('cap-in').addEventListener('keydown', e => {
 
 // ═══ INIT ═══
 go('zapisnik');
-window.addEventListener('load', () => { setTimeout(()=>{ if(G.cid) gInit(); }, 700); });
+window.addEventListener('load', () => {
+  setTimeout(()=>{ if(G.cid) gInit(); }, 700);
+  // Request notification permission and schedule weekly reflection
+  setTimeout(scheduleNotification, 3000);
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
